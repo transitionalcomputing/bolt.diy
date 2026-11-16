@@ -20,6 +20,20 @@ export function withAgentToolCallRecovery(model: LanguageModel, onRetry: () => v
 
   return {
     ...normalized,
+    // Preserve prototype-backed model metadata without mutating the provider model.
+    get specificationVersion() {
+      return normalized.specificationVersion;
+    },
+    get provider() {
+      return normalized.provider;
+    },
+    get modelId() {
+      return normalized.modelId;
+    },
+    get supportedUrls() {
+      return normalized.supportedUrls;
+    },
+    doGenerate: normalized.doGenerate.bind(normalized),
     doStream: async (params: Parameters<typeof normalized.doStream>[0]) => {
       const choice = params.toolChoice;
 
@@ -255,6 +269,20 @@ export function withAgentStreamDeadlines(model: LanguageModel, limits = DEFAULT_
 
   return {
     ...normalized,
+    // Preserve prototype-backed model metadata without mutating the provider model.
+    get specificationVersion() {
+      return normalized.specificationVersion;
+    },
+    get provider() {
+      return normalized.provider;
+    },
+    get modelId() {
+      return normalized.modelId;
+    },
+    get supportedUrls() {
+      return normalized.supportedUrls;
+    },
+    doGenerate: normalized.doGenerate.bind(normalized),
     doStream: async (params: Parameters<typeof normalized.doStream>[0]) => {
       const attempt = new AbortController();
       const signal = params.abortSignal ? AbortSignal.any([params.abortSignal, attempt.signal]) : attempt.signal;

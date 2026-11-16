@@ -136,6 +136,7 @@ export function toSafeStreamErrorMessage(error: unknown): string {
   const statusCode =
     typeof error === 'object' && error !== null && 'statusCode' in error ? error.statusCode : undefined;
 
+  logger.error('Streaming provider diagnostic', JSON.stringify(safeProviderDiagnostic(error)));
   logger.error(`Streaming provider error (${error instanceof Error ? error.name : 'UnknownError'})`);
 
   if ((error instanceof Error && error.name === 'TimeoutError') || /timeout|timed\s*out/.test(normalizedMessage)) {
@@ -334,4 +335,111 @@ function formatBytes(bytes: number): string {
   }
 
   return `${Math.round(bytes / 1024)} KB`;
+}
+
+const PROVIDER_DIAGNOSTIC_TYPES = new Set([
+  'Error', 'TypeError', 'RangeError', 'SyntaxError', 'AbortError', 'TimeoutError',
+  'AI_APICallError', 'AI_RetryError', 'AI_InvalidResponseDataError', 'AI_JSONParseError',
+  'AI_TypeValidationError', 'AI_InvalidArgumentError', 'AI_UnsupportedFunctionalityError',
+]);
+const PROVIDER_DIAGNOSTIC_CODES = new Set([
+  'ECONNREFUSED', 'ECONNRESET', 'ENOTFOUND', 'EAI_AGAIN', 'ETIMEDOUT',
+  'UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_HEADERS_TIMEOUT', 'CERT_HAS_EXPIRED',
+  'DEPTH_ZERO_SELF_SIGNED_CERT', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
+  'UNABLE_TO_GET_ISSUER_CERT_LOCALLY', 'ERR_TLS_CERT_ALTNAME_INVALID', 'ERR_INVALID_URL',
+  'invalid_api_key', 'insufficient_quota', 'rate_limit_exceeded', 'model_not_found',
+  'invalid_request_error', 'unsupported_parameter', 'context_length_exceeded',
+]);
+
+function diagnosticOwnData(object: unknown, key: string): unknown {
+  if (!object || (typeof object !== 'object' && typeof object !== 'function')) {
+    return undefined;
+  }
+
+  try {
+    return Object.getOwnPropertyDescriptor(object, key)?.value;
+  } catch {
+    return undefined;
+  }
+}
+
+function diagnosticType(error: unknown): string {
+  const own = diagnosticOwnData(error, 'name');
+
+  if (typeof own === 'string' && PROVIDER_DIAGNOSTIC_TYPES.has(own)) {
+    return own;
+  }
+
+  try {
+    const prototype = Object.getPrototypeOf(error);
+
+    for (const ctor of [TypeError, RangeError, SyntaxError, Error]) {
+      if (prototype === ctor.prototype) {
+        return ctor.name;
+      }
+    }
+  } catch {
+    // Unknown values must not interrupt error handling.
+  }
+
+  return 'UnknownError';
+}
+
+function diagnosticCategory(
+  status: number | undefined,
+  code: string | undefined,
+  message: unknown,
+  type: string,
+): string {
+  if (status === 401 || code === 'invalid_api_key') return 'authentication';
+  if (status === 403) return 'permission';
+  if (status === 429 || code === 'rate_limit_exceeded' || code === 'insufficient_quota') return 'rate_or_quota';
+  if (typeof status === 'number' && status >= 500) return 'upstream_server';
+  if (code && /CERT|TLS|ISSUER|SIGNATURE/.test(code)) return 'tls';
+  if (code === 'ERR_INVALID_URL') return 'invalid_url';
+  if (code && /ECONN|ENOTFOUND|EAI_AGAIN|ETIMEDOUT|UND_ERR/.test(code)) return 'transport';
+  if (type === 'AbortError') return 'cancelled';
+  if (type === 'TimeoutError') return 'timeout';
+
+  // Only fixed classifications leave this function, never message fragments.
+  if (typeof message === 'string') {
+    if (/fetch failed|failed to fetch|network connection lost/i.test(message)) return 'fetch_failure';
+    if (/not a function|cannot read properties|undefined is not|not iterable/i.test(message)) return 'runtime_type';
+  }
+
+  if (typeof status === 'number' && status >= 400) return 'upstream_rejection';
+
+  return 'unclassified';
+}
+
+/** Bounded, allowlisted diagnostics: never log messages, stacks, bodies, headers, or credentials. */
+export function safeProviderDiagnostic(error: unknown) {
+  const chain = [];
+  const seen = new Set();
+  let current = error;
+
+  for (let depth = 0; depth < 4 && current != null; depth++) {
+    if (seen.has(current)) break;
+    seen.add(current);
+
+    const type = diagnosticType(current);
+    const rawStatus = diagnosticOwnData(current, 'statusCode');
+    const statusCode =
+      typeof rawStatus === 'number' && Number.isInteger(rawStatus) && rawStatus >= 100 && rawStatus <= 599
+        ? rawStatus
+        : undefined;
+    const rawCode = diagnosticOwnData(current, 'code');
+    const code = typeof rawCode === 'string' && PROVIDER_DIAGNOSTIC_CODES.has(rawCode) ? rawCode : undefined;
+
+    chain.push({
+      depth,
+      type,
+      ...(statusCode === undefined ? {} : { statusCode }),
+      ...(code === undefined ? {} : { code }),
+      category: diagnosticCategory(statusCode, code, diagnosticOwnData(current, 'message'), type),
+    });
+    current = diagnosticOwnData(current, 'cause');
+  }
+
+  return { chain };
 }

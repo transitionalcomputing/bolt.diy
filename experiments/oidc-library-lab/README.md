@@ -49,4 +49,4 @@ References:
 - https://github.com/panva/openid-client/blob/main/docs/functions/enableNonRepudiationChecks.md
 - https://docs.goauthentik.io/add-secure-apps/providers/oauth2/
 
-To test the orchestration suite too, run `node --test ../account-keys-prototype/*.test.mjs` from this directory (23 tests). Neither suite makes real provider requests.
+To test the orchestration suite too, run `node --test ../account-keys-prototype/*.test.mjs` from this directory (30 tests). Neither suite makes real provider requests.

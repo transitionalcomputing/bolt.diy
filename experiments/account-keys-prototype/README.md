@@ -2,7 +2,7 @@
 
 Experimental, nonproduction prototype preserved only on the account-workspaces branch. No application integration, real credentials, authentication configuration, or deployment changes.
 
-Run `node --test *.test.mjs` from this directory (Node24 tested; 23 tests).
+Run `node --test *.test.mjs` from this directory (Node24 tested; 30 tests).
 
 Core contract:
 - Application supplies a reviewed `verifyIdentity(request)` capability. There is deliberately no default header/cookie verifier. Tests use a WeakMap of fake request objects, not user-controlled headers.
@@ -28,7 +28,7 @@ injected and mock-only in tests: no production JWT verifier or token exchange is
 implemented. The fake adapter accepts test subjects as codes and MUST NEVER be
 selected by an application. `createMockStore` is not durable or distributed.
 
-From the repository root run `node --test experiments/account-keys-prototype/*.test.mjs`: 23 tests pass under Node24.
+From the repository root run `node --test experiments/account-keys-prototype/*.test.mjs`: 30 tests pass under Node24.
 This is not a real browser, Authentik, workerd, discovery, or JWKS verification test.
 Node crypto compatibility with the deployed workerd runtime remains unverified.
 
@@ -69,4 +69,23 @@ server-internal nonproduction facade; HTTP routing must map methods strictly,
 limit body size, enforce JSON content type, set no-store, and never expose the
 provider resolver. Direct vault access is not an authorized HTTP entry point.
 Additional tests cover Unicode input, valid CSRF with wrong Origin, concurrent
-callback replay, allowlist revocation and guard-before-write. Total: 23 tests.
+callback replay, allowlist revocation and guard-before-write. Total: 30 tests.
+
+
+## HTTP integration seam (experimental, not mounted)
+`http.mjs` accepts injected auth and account services and returns a Fetch-style
+handler. It is not imported by Bolt, not served by a listener and not deployed.
+It adds explicit login/callback/session/logout and OpenAI configured/save/delete
+routes, no-store responses, fixed error bodies and an 8 KiB streamed JSON limit.
+Save authenticates and checks Origin/CSRF before consuming the credential body.
+Only `{apiKey: string}` is accepted; caller user IDs cannot select an account.
+There is no browser credential-read route or provider invocation here.
+
+`http.test.mjs` uses a conspicuously fake x-test-user header adapter solely as a
+unit-test fixture. It MUST NOT be copied into a live identity verifier. No real
+browser/Authentik/client credentials or API provider is used. Tests cover
+redaction, separate fake accounts, no-store, body validation/limits, method
+restriction, unauthenticated/CSRF rejection and callback cookie preservation.
+Actual app mounting, runtime validation, durable storage, logout policy, browser
+UI and full OIDC+HTTP integration are still outstanding. These tests do not prove
+production authentication or cross-browser persistence.

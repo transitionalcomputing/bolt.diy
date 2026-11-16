@@ -1,0 +1,22 @@
+{
+  "name": "oidc-library-lab",
+  "version": "1.0.0",
+  "description": "Experimental fake-only OIDC verification lab; not app integrated",
+  "scripts": {
+    "test": "node --test library.test.mjs",
+    "test:workerd": "node workerd-test.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "jose": "6.2.17",
+    "openid-client": "6.9.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "miniflare": "4.20260730.0"
+  },
+  "private": true
+}

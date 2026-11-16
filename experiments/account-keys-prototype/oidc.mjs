@@ -33,7 +33,7 @@ export function createAccountAuth({issuer,clientId,origin,protocol,transactions,
       if(!tx||tx.expires<=now()||!browser||!equal(tx.browser,hash(browser)))throw Error('Invalid login');
       // Adapter MUST validate signed ID token via pinned issuer discovery/JWKS,
       // issuer/audience/azp/exp/iat/nonce, code exchange and PKCE. No decode-only path.
-      const identity=await protocol.exchangeAndVerify({issuer,clientId,redirectUri:callback,code,codeVerifier:tx.verifier,expectedNonce:tx.nonce});
+      const identity=await protocol.exchangeAndVerify({issuer,clientId,redirectUri:callback,code,currentUrl:req.url,expectedState:state,codeVerifier:tx.verifier,expectedNonce:tx.nonce});
       if(identity?.issuer!==issuer||typeof identity.subject!=='string'||!identity.subject)throw Error('Invalid identity');
       if(await authorize({issuer,subject:identity.subject})!==true)throw Error('Forbidden');
       const token=random(),csrf=random();

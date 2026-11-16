@@ -55,3 +55,23 @@ To test the orchestration suite too, run `node --test ../account-keys-prototype/
 Node SQLite experiment. On this local workerd binary, DatabaseSync throws
 `Illegal constructor`; the probe passes by confirming unsupported behavior.
 It does not attempt to create a file or access a live database.
+
+## Worker-compatible local storage experiment
+Run `node d1-test.mjs`. It bundles d1-worker.mjs and uses only Miniflare's local
+D1-style binding with a fresh temporary persistence directory, deleted afterward.
+No remote D1 service/account/database is created. Eight simultaneous requests
+consume one transaction exactly once; disposing/recreating the worker runtime
+preserves the fake encrypted credential and session, rejects the second user,
+and keeps the transaction consumed. Node crypto vault operations run in workerd.
+
+This is runtime recreation in one test driver process, not a full host restart,
+power-loss/backup test or production deployment proof. The worker fixture trusts
+its test action to choose fake subjects and is NEVER deployable. No real-key,
+OIDC or HTTP account-route integration is included in this binding test.
+
+A D1-style binding avoids the nonfunctional node:sqlite stub. Coolify's actual
+worker launch/binding/persistence lifecycle still requires inspection and review:
+do not assume preview-mode persistence is a supported durable production store.
+Alternatives remain a reviewed private Node credential service with a persistent
+volume or a supported worker-compatible database service. No infrastructure
+choice, production binding, Cloudflare database, or live configuration was changed.

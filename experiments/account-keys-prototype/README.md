@@ -127,3 +127,10 @@ Cloudflare documenting node:sqlite as a nonfunctional compatibility stub:
 https://developers.cloudflare.com/workers/runtime-apis/nodejs/
 No deployed runtime probe was performed. Node API reference:
 https://nodejs.org/api/sqlite.html
+
+`d1-store.mjs` is an alternative D1-style binding adapter using the same fixed
+namespaces and atomic DELETE RETURNING. The isolated sibling lab d1-test.mjs
+verifies it under local Miniflare/workerd with fake data and a temporary persisted
+binding. It is not mounted in the app and does not create a remote D1 database.
+Production persistence and lifecycle support in the Coolify-hosted preview runtime
+remain unverified; local success is not permission or readiness to deploy.

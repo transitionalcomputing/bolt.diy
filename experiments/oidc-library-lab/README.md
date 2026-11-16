@@ -15,7 +15,7 @@ contact external services. Node test global fetch throws and the protocol uses a
 closed mocked token/JWKS transport. Workerd outboundService throws.
 
 Verified locally with Node24.22.1: openid-client6.9.0, oauth4webapi3.8.8,
-jose6.2.17. Eleven library tests pass: valid signed RS256 identity, rejection of
+jose6.2.17. Twelve library/integration tests pass: valid signed RS256 identity, rejection of
 wrong signature/issuer/audience/nonce/expiry/state, missing ID token, unknown kid,
 and foreign metadata endpoint. Actual JWS validation is explicitly enabled with
 openid-client enableNonRepudiationChecks, not merely decoded claims.
@@ -75,3 +75,26 @@ do not assume preview-mode persistence is a supported durable production store.
 Alternatives remain a reviewed private Node credential service with a persistent
 volume or a supported worker-compatible database service. No infrastructure
 choice, production binding, Cloudflare database, or live configuration was changed.
+
+
+## Supported Node storage integration slice
+`account-integration.test.mjs` composes the real OIDC library adapter, the HTTP
+handler, server sessions, guarded account service and Node SQLite vault adapter.
+It uses mocked token/JWKS responses signed with ephemeral test keys, synthetic
+Fetch requests and a temporary local database only. Global fetch rejects all
+real networking. Tests exercise two mock Alice browsers, isolated Bob, replay
+rejection, secret-free status, per-session logout, authorization revocation and
+credential/session continuity after closing/reopening the service's database
+connection. This latter check is service reconstruction, not a new process;
+the separate sqlite.test.mjs already tests true process-exit persistence.
+
+No application listener, reverse-proxy routing, live Authentik login, browser UI
+or deployed account feature is created by this test. For the current Coolify
+architecture, a dedicated reviewed Node account service with persistent storage
+is the preferred production-design candidate, NOT a promotion of vite preview's
+local database simulation. Its transport/authentication boundary, operational
+backup/restore and secret lifecycle still require design/review before deployment.
+
+PKCE limitation: the fake identity provider does not compare the authorization
+code challenge with the submitted verifier. These tests exercise the client's
+PKCE parameter plumbing, not complete end-to-end PKCE enforcement by an IdP.

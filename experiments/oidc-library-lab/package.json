@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Experimental fake-only OIDC verification lab; not app integrated",
   "scripts": {
-    "test": "node --test library.test.mjs",
+    "test": "node --test library.test.mjs account-integration.test.mjs",
     "test:workerd": "node workerd-test.mjs"
   },
   "keywords": [],

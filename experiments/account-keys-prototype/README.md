@@ -2,7 +2,7 @@
 
 Experimental, nonproduction prototype preserved only on the account-workspaces branch. No application integration, real credentials, authentication configuration, or deployment changes.
 
-Run `node --test *.test.mjs` from this directory (Node24 tested; 30 tests).
+Run `node --test *.test.mjs` from this directory (Node24 tested; 34 tests).
 
 Core contract:
 - Application supplies a reviewed `verifyIdentity(request)` capability. There is deliberately no default header/cookie verifier. Tests use a WeakMap of fake request objects, not user-controlled headers.
@@ -28,7 +28,7 @@ injected and mock-only in tests: no production JWT verifier or token exchange is
 implemented. The fake adapter accepts test subjects as codes and MUST NEVER be
 selected by an application. `createMockStore` is not durable or distributed.
 
-From the repository root run `node --test experiments/account-keys-prototype/*.test.mjs`: 30 tests pass under Node24.
+From the repository root run `node --test experiments/account-keys-prototype/*.test.mjs`: 34 tests pass under Node24.
 This is not a real browser, Authentik, workerd, discovery, or JWKS verification test.
 Node crypto compatibility with the deployed workerd runtime remains unverified.
 
@@ -69,7 +69,7 @@ server-internal nonproduction facade; HTTP routing must map methods strictly,
 limit body size, enforce JSON content type, set no-store, and never expose the
 provider resolver. Direct vault access is not an authorized HTTP entry point.
 Additional tests cover Unicode input, valid CSRF with wrong Origin, concurrent
-callback replay, allowlist revocation and guard-before-write. Total: 30 tests.
+callback replay, allowlist revocation and guard-before-write. Total: 34 tests.
 
 
 ## HTTP integration seam (experimental, not mounted)
@@ -89,3 +89,41 @@ restriction, unauthenticated/CSRF rejection and callback cookie preservation.
 Actual app mounting, runtime validation, durable storage, logout policy, browser
 UI and full OIDC+HTTP integration are still outstanding. These tests do not prove
 production authentication or cross-browser persistence.
+
+
+## Durable SQLite experiment (Node-only, fake data)
+`sqlite-store.mjs` uses Node's built-in DatabaseSync and a server-owned database
+path. Separate fixed namespaces hold transactions, sessions and encrypted
+credential rows. Prepared statements prevent identifier interpolation. One
+`DELETE ... RETURNING` statement consumes a login transaction atomically across
+connections/processes. WAL, synchronous=FULL and a five-second busy timeout are
+configured only on the test database, not on any live system.
+
+Four tests use fresh temporary directories and delete only their own synthetic
+files afterward. They verify a real writer-process exit followed by a fresh
+reader-process decryption, eight-process contention with exactly one consumer,
+namespace/overwrite/delete behavior, wrong-master-key rejection and second-user
+isolation. No plaintext fake credential appears in the persisted main database.
+The fake constant master key in sqlite-child.mjs is TEST DATA, not key management.
+
+This proves the local Node adapter's basic persistence and transaction behavior,
+not production durability under power loss or operational readiness. Sessions
+and transactions contain sensitive runtime material and are not encrypted by
+this adapter; production storage needs appropriate permissions, backup protection,
+retention cleanup and a reviewed encryption/key lifecycle policy. Only the
+credential payload is encrypted by the vault before insertion.
+
+This adapter is NOT suitable for importing into the existing workerd app: local
+node:sqlite/filesystem support has not been established there. Deployment would
+require a separately reviewed Node server/service with durable volume or a
+runtime-compatible database adapter. No service, volume, database or configuration
+was created on the user's systems. Node24.22.1 was used locally; the deployed
+Node22/workerd combination has not been validated.
+
+Local negative runtime probe confirmed the limitation: workerd1.20260730.1,
+compatibility2026-08-06, nodejs_compat allows importing node:sqlite but
+`new DatabaseSync(':memory:')` throws `Illegal constructor`. This aligns with
+Cloudflare documenting node:sqlite as a nonfunctional compatibility stub:
+https://developers.cloudflare.com/workers/runtime-apis/nodejs/
+No deployed runtime probe was performed. Node API reference:
+https://nodejs.org/api/sqlite.html

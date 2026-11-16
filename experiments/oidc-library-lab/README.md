@@ -49,4 +49,9 @@ References:
 - https://github.com/panva/openid-client/blob/main/docs/functions/enableNonRepudiationChecks.md
 - https://docs.goauthentik.io/add-secure-apps/providers/oauth2/
 
-To test the orchestration suite too, run `node --test ../account-keys-prototype/*.test.mjs` from this directory (30 tests). Neither suite makes real provider requests.
+To test the orchestration suite too, run `node --test ../account-keys-prototype/*.test.mjs` from this directory (34 tests). Neither suite makes real provider requests.
+
+`node sqlite-runtime-probe.mjs` is a negative compatibility check for the separate
+Node SQLite experiment. On this local workerd binary, DatabaseSync throws
+`Illegal constructor`; the probe passes by confirming unsupported behavior.
+It does not attempt to create a file or access a live database.

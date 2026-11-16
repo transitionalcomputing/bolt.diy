@@ -1,0 +1,72 @@
+# Isolated account OpenAI credential prototype
+
+Experimental, nonproduction prototype preserved only on the account-workspaces branch. No application integration, real credentials, authentication configuration, or deployment changes.
+
+Run `node --test *.test.mjs` from this directory (Node24 tested; 23 tests).
+
+Core contract:
+- Application supplies a reviewed `verifyIdentity(request)` capability. There is deliberately no default header/cookie verifier. Tests use a WeakMap of fake request objects, not user-controlled headers.
+- Repository records are scoped by verified issuer/subject and OpenAI provider.
+- AES-256-GCM with fresh96-bit nonce,128-bit authentication tag and owner/provider identifier as authenticated additional data. Master encryption key is supplied separately from repository.
+- Save/status/delete never return stored key. `resolveForProvider` is internal server-only and returns a key only for provider invocation. It must never back a client-readable route.
+- No browser/cookie/shared-environment credential fallback. No logging. Failed decryption returns a fixed error.
+- A random credential revision changes on replacement for future cache invalidation.
+
+Limitations before production:
+- Memory repository is explicitly test-only, not durable. Re-instantiation test is not evidence of disk/restart persistence.
+- Real OIDC identity verification, production authorization policy, durable storage, deployed-runtime crypto compatibility, transport protection, HTTP route integration, audit logs without secrets, backup/restore, master-key rotation and key lifecycle remain unimplemented. Authorization and CSRF/Origin logic are exercised only through injected mock identities and synthetic requests.
+- No UI/browser migration and no app routes wired. Cross-browser test uses two fake request objects with same verified identity, not real browser sessions.
+- The app's shared OpenAI fallback and all provider routes must be changed in reviewed account mode before live use.
+- Server operators controlling application memory/master key can access credentials; encryption at rest does not protect against a fully compromised application.
+- Do not integrate or deploy until separately reviewed. Production requires security review plus actual two-user/two-browser isolation tests with fake credentials before any real keys.
+
+## OIDC boundary prototype (isolated experiment)
+`oidc.mjs` adds Authorization Code + PKCE orchestration, state/nonce/browser
+binding, atomic one-use callback transactions, opaque server sessions, expiry,
+local logout and Origin+CSRF mutation checks. The `protocol` adapter is deliberately
+injected and mock-only in tests: no production JWT verifier or token exchange is
+implemented. The fake adapter accepts test subjects as codes and MUST NEVER be
+selected by an application. `createMockStore` is not durable or distributed.
+
+From the repository root run `node --test experiments/account-keys-prototype/*.test.mjs`: 23 tests pass under Node24.
+This is not a real browser, Authentik, workerd, discovery, or JWKS verification test.
+Node crypto compatibility with the deployed workerd runtime remains unverified.
+
+Production architecture: use a maintained OIDC client to implement the protocol
+adapter with a configured/pinned issuer and explicit asymmetric signing key,
+strict callback URI, PKCE, state and nonce validation, algorithm allowlist,
+issuer/audience/azp/time checks and bounded JWKS refresh. Do not follow JWKS URLs
+from request headers. Protect token exchange and discovery with normal TLS
+verification. Store sessions/transactions/credential ciphertext durably; `take`
+must be atomic across all app instances. Isolate test hostname, cookie namespace,
+provider/client, database and encryption secret from production.
+
+Integration must call `requireMutation` before vault save/delete and expose only
+configured status, never `resolveForProvider` to a browser. Current vault methods
+are server-internal and do not themselves implement HTTP CSRF protection. All
+model/chat/tool routes must obtain identity from the same session verifier and
+resolve the key request-locally with no old cookie/body/shared-env fallback.
+Use no-store for account responses; request/body/authorization logging must be
+redacted. Session revocation and Authentik end-session/backchannel handling need
+an explicit policy; this prototype only logs out its local session.
+
+This branch contains prototype source and tests only, with no dependency or app
+integration changes. No deployment, live credential read, or Authentik setting
+change is included. Review and real runtime compatibility validation are required
+before even a separate test deployment.
+
+### Review corrections
+The constant-time helper compares UTF-8 byte lengths before timingSafeEqual;
+non-ASCII malformed CSRF input fails as Forbidden rather than RangeError.
+The OIDC factory now requires an explicit `authorize({issuer, subject})` seam,
+which must return exactly true. It is checked at login and on every session
+lookup, so allowlist removal denies an existing session. The test allowlist is
+only alice/bob fake identities; production must bind exact verified issuer/sub
+pairs, never automatically allow every Authentik user. Exceptions fail closed.
+
+`account-service.mjs` wraps save/remove with the mutation guard. This remains a
+server-internal nonproduction facade; HTTP routing must map methods strictly,
+limit body size, enforce JSON content type, set no-store, and never expose the
+provider resolver. Direct vault access is not an authorized HTTP entry point.
+Additional tests cover Unicode input, valid CSRF with wrong Origin, concurrent
+callback replay, allowlist revocation and guard-before-write. Total: 23 tests.

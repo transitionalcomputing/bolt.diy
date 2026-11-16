@@ -2,7 +2,7 @@
 
 Experimental, nonproduction prototype preserved only on the account-workspaces branch. No application integration, real credentials, authentication configuration, or deployment changes.
 
-Run `node --test *.test.mjs` from this directory (Node24 tested; 34 tests).
+Run `node --test *.test.mjs` from this directory (Node24 tested; 39 tests).
 
 Core contract:
 - Application supplies a reviewed `verifyIdentity(request)` capability. There is deliberately no default header/cookie verifier. Tests use a WeakMap of fake request objects, not user-controlled headers.
@@ -28,7 +28,7 @@ injected and mock-only in tests: no production JWT verifier or token exchange is
 implemented. The fake adapter accepts test subjects as codes and MUST NEVER be
 selected by an application. `createMockStore` is not durable or distributed.
 
-From the repository root run `node --test experiments/account-keys-prototype/*.test.mjs`: 34 tests pass under Node24.
+From the repository root run `node --test experiments/account-keys-prototype/*.test.mjs`: 39 tests pass under Node24.
 This is not a real browser, Authentik, workerd, discovery, or JWKS verification test.
 Node crypto compatibility with the deployed workerd runtime remains unverified.
 
@@ -69,7 +69,7 @@ server-internal nonproduction facade; HTTP routing must map methods strictly,
 limit body size, enforce JSON content type, set no-store, and never expose the
 provider resolver. Direct vault access is not an authorized HTTP entry point.
 Additional tests cover Unicode input, valid CSRF with wrong Origin, concurrent
-callback replay, allowlist revocation and guard-before-write. Total: 34 tests.
+callback replay, allowlist revocation and guard-before-write. Total: 39 tests.
 
 
 ## HTTP integration seam (experimental, not mounted)
@@ -134,3 +134,32 @@ verifies it under local Miniflare/workerd with fake data and a temporary persist
 binding. It is not mounted in the app and does not create a remote D1 database.
 Production persistence and lifecycle support in the Coolify-hosted preview runtime
 remain unverified; local success is not permission or readiness to deploy.
+
+
+## Server-only OpenAI provider boundary (not mounted)
+`openai-boundary.mjs` is an isolated seam for later account-aware provider wiring.
+It verifies the session, checks Origin/CSRF on generation, resolves only that
+account's credential on every call, and supplies a fixed OpenAI base URL to an
+injected trusted server driver. Caller credential/account/endpoint overrides are
+rejected. No process-global provider/key cache, browser return of the resolved key,
+or shared environment fallback exists in this seam.
+
+Five fake-driver tests cover concurrent users, unauthenticated/missing-key denial,
+caller override and wrong-origin denial, replacement/deletion without stale-key
+cache, and method/prompt validation. There are no paid or real provider requests.
+The fake driver records fake keys for assertions only; this is not production
+logging. Production adapters must not log or reflect driver configuration.
+
+This is not integrated with Bolt chat, streaming, tools or model-list routes.
+The intentionally narrow model+prompt shape is a prototype contract, not a drop-in
+replacement for Bolt's message protocol. A driver call already in flight cannot
+be revoked retroactively by deleting a key; revocation affects subsequent calls.
+Driver errors must pass through the fixed/redacted HTTP boundary, not be returned
+raw. A production driver and actual application route integration remain to do.
+
+Trusted-driver limitation: the boundary returns driver output unchanged. The
+fake-driver test shows only that its chosen response contains no fake key; the
+boundary does not sanitize arbitrary driver output. A production SDK adapter must
+validate permitted response shapes and redact errors, and its transport must
+independently enforce the fixed upstream, forbid redirects and reject shared-key
+fallback. None of those production-driver behaviors has been proven here.

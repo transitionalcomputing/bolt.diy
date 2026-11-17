@@ -51,3 +51,19 @@ not proof of the remote browser clipboard/terminal path. The helper assumes trus
 root-owned directory ancestors; it is not a sandbox against malicious ancestor
 replacement. UUID shape validation is not identity verification: verify each user's
 actual UUID administratively before assembling the private base file.
+
+## Browser diagnostic boundary
+
+A masked password input is not a redaction boundary for automation tools. Locator
+ambiguity/errors can include underlying input values. Do not inspect, enumerate,
+or resolve the secret field through a locator that can return its DOM/value in
+diagnostics. If a supported no-output copy operation cannot be established, use a
+human handoff: the owner rotates only the new test client's secret, copies the
+replacement directly into the helper's hidden TTY prompt, then clears clipboard.
+Never send the replacement in chat or paste it into an echoed shell command.
+
+If a client secret appears in a diagnostic, stop using it immediately. Rotate that
+client secret before any deployment; do not treat an absent host input file as
+proof the exposed value remains safe. Rotation must be verified through safe
+status only, without comparing or printing old/new secret values. Preserve the
+client identity, callback, scope, signing and access bindings unchanged.

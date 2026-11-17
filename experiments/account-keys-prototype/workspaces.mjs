@@ -1,4 +1,5 @@
 /** Experimental server-internal immutable workspace snapshot service; explicit trusted storage adapter. */
+import {validateWorkspaceRecord} from './workspace-record.mjs';
 import {randomUUID} from 'node:crypto';import {prepareInertImport} from './inert-import.mjs';
 export function createWorkspaceService({auth,repository}){
  const owner=async request=>{const p=await auth.verifyIdentity(request);if(typeof p?.issuer!=='string'||!p.issuer||typeof p?.subject!=='string'||!p.subject)throw Error('Unauthenticated');return JSON.stringify([p.issuer,p.subject]);};
@@ -17,7 +18,7 @@ export function createWorkspaceService({auth,repository}){
   },
   async read(request,id){
    if(request.method!=='GET')throw Error('Method not allowed');const scope=await owner(request);idCheck(id);
-   const result=await repository.get(scope,id);if(!result)throw Error('Workspace not found');return structuredClone(result);
+   const result=await repository.get(scope,id);if(!result)throw Error('Workspace not found');return validateWorkspaceRecord(result,id);
   },
  });
 }

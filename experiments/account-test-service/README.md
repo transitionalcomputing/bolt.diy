@@ -77,3 +77,16 @@ only the test service to revoke local access. A synthetic retained-session test
 reconstructs auth with a changed allowlist and confirms the old user's cookie fails
 while the other approved user's cookie remains valid. Actual test deployment must
 repeat this behavior in browsers and record the limitation before any rollout.
+
+For the eventual two-browser test, `node generate-test-fixtures.mjs NEW_DIRECTORY`
+creates two distinct fake ZIPs plus expected hashes/base64. It refuses overwriting
+existing filenames. A parser roundtrip test verifies each archive's distinct binary
+content. These contain only generated data; no user project is accessed or migrated.
+
+Workspace download now revalidates persisted canonical base64, totals, paths and
+hashes before returning an attachment. This catches corruption, not maliciously
+recomputed hashes; storage encryption/permissions and backups remain required.
+
+Fixture generation is not atomic: an existing directory is allowed and an error can
+leave earlier newly created files behind. Existing files are never overwritten.
+Stored SHA256 values are consistency checks, not authenticated provenance.

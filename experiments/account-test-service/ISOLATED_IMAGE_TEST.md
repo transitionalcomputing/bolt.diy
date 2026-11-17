@@ -32,3 +32,19 @@ A combined real Node+Postgres test requires an explicit private-network plan and
 secure real test configuration. Do not attach the test to existing production
 networks casually. Public hostname/proxy/TLS and separate real Authentik client
 configuration remain concrete security-sensitive changes to confirm before acting.
+
+
+## Additional candidate no-external-network bootstrap check
+
+After SCRAM-authenticated disposable PG tests, an additional Node container may share
+only that disposable container's network namespace (`--network container:TEST_PG`),
+where TEST_PG itself uses `--network none` and no ports. This is a candidate test, not
+an executed claim. Inject only fake OIDC configuration/two fake subjects and the fake
+restricted test DB login; do not connect real IdP metadata or secrets. Use the explicit
+approved-private-test-network DB mode for this fully isolated loopback hop.
+
+Via `docker exec` inside the Node container, a small Node fetch check with canonical
+Host can verify health, anonymous session/list/upload denial and invalid callback
+rejection. Do not follow the fake authorization redirect or contact any external IdP.
+This verifies valid bootstrap and actual pg driver connectivity, not real login/TLS.
+No container should be attached to an existing production network or published port.

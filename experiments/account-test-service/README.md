@@ -101,3 +101,23 @@ allows 15 seconds before Docker forces termination. These are termination bounds
 crash-durability guarantees. Upgraded connections are not managed by this harness
 (which has no upgrade handler). Local tests exercise a real loopback bind conflict
 and mocked stalled shutdown; they do not replace container signal/restart testing.
+
+### Synthetic key acceptance seam (not mounted)
+`fake-credentials.mjs` accepts only the enum selections `alpha` and `beta`; it does
+not accept an API key string, request an OpenAI call, or expose a raw credential.
+The server maps those names to explicitly fake fixtures and uses the existing
+owner-bound encrypted vault. Status returns only configured/fixture selection so
+two test accounts can prove their different saved choices survive reconstruction.
+Current tests use in-memory persistence; native PostgreSQL/browser acceptance is
+still pending. Bootstrap and browser UI are not yet wired to this seam. A future
+separate test deployment must provision a fresh encryption key privately and keep
+it stable across restarts; never reuse a production vault key. A real OpenAI-key
+feature requires separate reviewed integration and cannot be enabled by changing
+a fixture value in the browser.
+The separate unmounted `fake-credential-http.mjs` adapter accepts only JSON fixture
+selection on `/api/test-credentials`; it authenticates and checks mutation origin/
+CSRF before reading a maximum128-byte body. It has no raw-key read or provider call.
+Its tests use mocked identity/CSRF and memory storage, not actual browser sessions.
+Synthetic HTTP body reading has a2second default deadline and honors request abort;
+it cancels the reader without awaiting a potentially stalled underlying cancellation.
+These bounds cover body intake, not transaction completion or blocked event loops.

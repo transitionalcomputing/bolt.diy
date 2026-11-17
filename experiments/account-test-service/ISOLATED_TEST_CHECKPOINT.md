@@ -31,18 +31,19 @@ No real Authentik login, valid-config Node/database bootstrap, browser persisten
 public route, project migration or production change occurred. These results do not
 prove crash recovery, RLS tenant isolation, image vulnerability clearance or TLS.
 
-## Interruption and required follow-through
+## Completed follow-through (reported by coordinated execution worker)
 
-The Mac/browser connection became unavailable before restart of the SCRAM test
-instance and cleanup. Two bounded network-none containers remain:
-`bolt-account-pg-af5c0a` and `bolt-account-pg-scram-af5c0a`.
-Do not claim them removed. Preserve/read-verify the retained test logs in an approved
-project evidence location before removing the exact disposable resources. Never use
-broad prune or touch existing production containers/volumes.
+The supported connection was restored. The SCRAM instance was restarted and an
+actual restricted-password login again verified two rows and AP8= binary retained.
+The exact two test containers and their two anonymous volumes were removed with
+exit0; six pre-existing services remained healthy. The old af5c0a image remains
+cached, not running. Dump/log evidence remains in the unique temporary test folder;
+it has not been claimed as a long-term backup or copied into this public repository.
 
-Once the supported connection is restored, first inspect actual container/state and
-preserve evidence, then complete exact cleanup. Rebuild the exact latest reviewed branch revision before any new
-valid-bootstrap test. A next optional isolated test can share the disposable PG's
-network-none namespace with Node using fake configuration only; it must not expose
-ports or attach to production networks. Real Authentik/DNS/TLS test provisioning
-still requires concrete configuration review and applicable action-time approval.
+Latest reviewed source is **383a3adefbb24f11ca7d949a39a4af92c528a937** with127 local
+passing tests. It includes bounded listener lifecycle and a fake-only native
+readiness probe; it has not yet been remotely rebuilt or deployed. Build this exact
+candidate for the next isolated test, not the cached af5c0a image.
+
+Real Authentik/DNS/TLS test provisioning still requires exact verified configuration
+and applicable action-time approval. Browser ownership must be handed off explicitly.

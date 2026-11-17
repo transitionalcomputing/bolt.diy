@@ -179,3 +179,16 @@ and provisioned test environment.
 
 The additional PGlite maintenance test verifies expired transaction/session deletion
 while retaining current sessions and credential records. Lab total:26 tests.
+
+
+## Actual loopback HTTP harness readiness
+
+`test-harness-http.test.mjs` starts the actual Node bridge/test handler on127.0.0.1
+with an ephemeral port. Manual HTTP clients use signed synthetic OIDC/PKCE, separate
+cookie jars and distinct generated ZIPs. They test import/list/integrity-checked
+read, cross-owner denial, anonymous/CSRF denial, actual listener and disk-engine
+close/reopen followed by fresh logins, and logout denial even with a retained cookie.
+The other user's session remains valid. No external network or real IdP is used.
+This is real local HTTP, but NOT a real browser, HTTPS/SameSite/Secure-cookie policy,
+Authen­tik, OS-process restart/crash or multi-connection Postgres proof. The client
+manually carries cookies. Lab total:28 tests.

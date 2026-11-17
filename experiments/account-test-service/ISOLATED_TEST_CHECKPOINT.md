@@ -3,9 +3,10 @@
 ## Source versions
 
 - Image and real PostgreSQL tests below used **af5c0a647e34c7dcae31168ab974742fa3e62f03**.
-- Latest reviewed source is **c3285e955c4c73685f5a7dffe69429c1cebcf56f** (auth expiry/CSRF
+- Auth-hardening source checkpoint: **c3285e955c4c73685f5a7dffe69429c1cebcf56f** (auth expiry/CSRF
   fail-closed checks and explicit test allowlist reconstruction).
-- Latest source has115 passing offline tests; its image has **not** been rebuilt/tested.
+- That checkpoint had115 passing offline tests; its image was **not** rebuilt/tested.
+- Subsequent reviewed integrity/fixture source: **016550991f26021b29f207f58cae23fda76c3f0b**,120 offline tests; no remote image result for this revision yet.
 - Production main remains **efb34d0f1e1e4d224ff133f0ca28fecc343066a6**. No deployment.
 
 ## Reported execution evidence
@@ -40,7 +41,7 @@ project evidence location before removing the exact disposable resources. Never 
 broad prune or touch existing production containers/volumes.
 
 Once the supported connection is restored, first inspect actual container/state and
-preserve evidence, then complete exact cleanup. Rebuild latest c3285e9 before any new
+preserve evidence, then complete exact cleanup. Rebuild the exact latest reviewed branch revision before any new
 valid-bootstrap test. A next optional isolated test can share the disposable PG's
 network-none namespace with Node using fake configuration only; it must not expose
 ports or attach to production networks. Real Authentik/DNS/TLS test provisioning

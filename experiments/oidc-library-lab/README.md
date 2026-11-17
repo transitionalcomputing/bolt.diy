@@ -15,7 +15,7 @@ contact external services. Node test global fetch throws and the protocol uses a
 closed mocked token/JWKS transport. Workerd outboundService throws.
 
 Verified locally with Node24.22.1: openid-client6.9.0, oauth4webapi3.8.8,
-jose6.2.17. Fourteen library/integration/virtual-DOM tests pass: valid signed RS256 identity, rejection of
+jose6.2.17. Sixteen library/integration/virtual-DOM/SQL-engine tests pass: valid signed RS256 identity, rejection of
 wrong signature/issuer/audience/nonce/expiry/state, missing ID token, unknown kid,
 and foreign metadata endpoint. Actual JWS validation is explicitly enabled with
 openid-client enableNonRepudiationChecks, not merely decoded claims.
@@ -105,3 +105,20 @@ Virtual DOM tests use isolated jsdom as a development-only dependency. No script
 or resources are loaded from real sites. They verify input clearing, button/status
 updates and safe error text. This is not a real browser test and does not validate
 browser cookie policy, TLS, redirects through the actual proxy or accessibility.
+
+
+## Offline Postgres-WASM validation
+`postgres-engine.test.mjs` uses isolated PGlite to execute the draft schema and
+actual parameterized queries. Tests verify upsert/JSONB/namespace/check-constraint
+behavior, hostile identifier treated as data, DELETE RETURNING consume, and
+file-backed close/reopen of encrypted fake credentials with second-user and
+wrong-master-key rejection. External fetch is blocked; only temporary test files
+are used and removed. No PostgreSQL server, Supabase project, network connection,
+real key, database role or production migration is touched.
+
+PGlite runs a single-user PostgreSQL engine in WASM. Eight submitted take promises
+are serialized by its client; that is NOT multi-session/concurrent server proof.
+Close/reopen is not a separate process or crash/power-loss test. This establishes
+SQL compatibility in this engine, not deployed PostgreSQL version compatibility,
+RLS/authenticated roles/PostgREST permissions, TLS, pooling or operational durability.
+See https://pglite.dev/docs/about and https://github.com/electric-sql/pglite.

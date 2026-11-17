@@ -254,3 +254,9 @@ match Authentik without an explicit verified mapping. Keep private tables out of
 PostgREST exposure and review a least-privilege server role before deployment.
 Workspace metadata/blobs and generated-app databases require separate designs;
 this adapter currently covers only session, login transaction and credential rows.
+
+
+A separate PGlite lab now executes this draft SQL against local PostgreSQL-WASM
+rather than only a fake query client. It verifies JSONB/upsert/constraint/query
+semantics and file-backed reopen with fake encrypted data. It remains single-user,
+not server concurrency, real permissions or Supabase deployment validation.

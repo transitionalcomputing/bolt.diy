@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Experimental fake-only OIDC verification lab; not app integrated",
   "scripts": {
-    "test": "node --test library.test.mjs account-integration.test.mjs ui-dom.test.mjs",
+    "test": "node --test library.test.mjs account-integration.test.mjs ui-dom.test.mjs postgres-engine.test.mjs",
     "test:workerd": "node workerd-test.mjs"
   },
   "keywords": [],
@@ -15,6 +15,7 @@
     "openid-client": "6.9.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.16",
     "esbuild": "0.28.2",
     "jsdom": "31.0.1",
     "miniflare": "4.20260730.0"

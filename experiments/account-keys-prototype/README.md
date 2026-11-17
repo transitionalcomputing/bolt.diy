@@ -2,7 +2,7 @@
 
 Experimental, nonproduction prototype preserved only on the account-workspaces branch. No application integration, real credentials, authentication configuration, or deployment changes.
 
-Run `node --test *.test.mjs` from this directory (Node24 tested; 39 tests).
+Run `node --test *.test.mjs` from this directory (Node24 tested; 50 tests).
 
 Core contract:
 - Application supplies a reviewed `verifyIdentity(request)` capability. There is deliberately no default header/cookie verifier. Tests use a WeakMap of fake request objects, not user-controlled headers.
@@ -28,7 +28,7 @@ injected and mock-only in tests: no production JWT verifier or token exchange is
 implemented. The fake adapter accepts test subjects as codes and MUST NEVER be
 selected by an application. `createMockStore` is not durable or distributed.
 
-From the repository root run `node --test experiments/account-keys-prototype/*.test.mjs`: 39 tests pass under Node24.
+From the repository root run `node --test experiments/account-keys-prototype/*.test.mjs`: 50 tests pass under Node24.
 This is not a real browser, Authentik, workerd, discovery, or JWKS verification test.
 Node crypto compatibility with the deployed workerd runtime remains unverified.
 
@@ -69,7 +69,7 @@ server-internal nonproduction facade; HTTP routing must map methods strictly,
 limit body size, enforce JSON content type, set no-store, and never expose the
 provider resolver. Direct vault access is not an authorized HTTP entry point.
 Additional tests cover Unicode input, valid CSRF with wrong Origin, concurrent
-callback replay, allowlist revocation and guard-before-write. Total: 39 tests.
+callback replay, allowlist revocation and guard-before-write. Total: 50 tests.
 
 
 ## HTTP integration seam (experimental, not mounted)
@@ -163,3 +163,33 @@ boundary does not sanitize arbitrary driver output. A production SDK adapter mus
 validate permitted response shapes and redact errors, and its transport must
 independently enforce the fixed upstream, forbid redirects and reject shared-key
 fallback. None of those production-driver behaviors has been proven here.
+
+
+## Fixed-origin HTTP driver experiment
+`openai-driver.mjs` narrows the trusted-driver gap for nonstreaming operations.
+It accepts an explicit server transport, fixes requests to OpenAI's /models or
+/chat/completions paths, rejects redirects, sets an abort deadline, bounds response
+bytes, checks JSON content type, rejects direct credential reflection and exposes
+only model IDs or generated text. Raw upstream bodies and transport errors are
+never returned. No existing API key or real provider was used in tests.
+
+Eight fake-response tests exercise fixed destination and request fields, output
+schema, status/error/redirect rejection, malformed/oversized JSON, direct secret
+reflection and invalid config. Actual network behavior is still untested. Transport
+must honor Fetch redirect and AbortSignal semantics; a custom transport can violate
+that contract. Credential reflection detection is defense-in-depth, not a general
+secret-exfiltration detector. The prototype uses a fixed1024-token cap, no streaming,
+tools, retries or arbitrary model settings, and is not mounted in Bolt.
+
+## Node HTTP bridge (local-only experiment)
+`node-http.mjs` bridges Node IncomingMessage to the reviewed Fetch handler. It
+requires a server-configured HTTPS origin, validates Host/request target, strips
+unverified forwarded and Authentik identity headers, preserves original Origin
+for CSRF validation, and preserves separate Set-Cookie headers. The factory does
+not listen automatically. Tests bind only an ephemeral127.0.0.1 port and close it.
+
+Node receive/header timeouts do NOT impose a handler or upstream execution
+deadline. Client disconnect currently does not propagate cancellation to the
+handler/provider. TLS termination, reverse-proxy configuration/trust, rate limits,
+real OIDC login and actual Bolt route mounting remain untested. This bridge is
+not production-ready and no live listener, port or network setting was changed.

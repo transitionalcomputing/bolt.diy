@@ -64,3 +64,16 @@ cap,4MiB output cap and fixed-window rate reset. These remain single-process con
 Malformed/missing/noninteger auth expiry is treated as invalid and removed by the
 cleanup query, rather than causing a cast failure or immortal auth record. Scope
 remains only session/transaction namespaces; SQL-engine regressions cover this.
+
+
+## Test-only revocation behavior
+
+Local app sessions last up to one hour. Disabling/removing a user only in Authentik
+does not immediately invalidate an already established local session: no back-channel
+logout or live IdP account-status polling is implemented. This is a production gate,
+not a reason to bypass Authentik restrictions. The test service rechecks its explicit
+issuer/subject allowlist per request; update that test configuration and restart
+only the test service to revoke local access. A synthetic retained-session test
+reconstructs auth with a changed allowlist and confirms the old user's cookie fails
+while the other approved user's cookie remains valid. Actual test deployment must
+repeat this behavior in browsers and record the limitation before any rollout.

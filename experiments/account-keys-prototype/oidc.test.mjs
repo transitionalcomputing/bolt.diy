@@ -25,3 +25,10 @@ test('account facade enforces mutation guard before vault writes',async()=>{
   const mutation=()=>new Request(origin,{method:'PUT',headers:{cookie:c,origin,'x-csrf-token':csrf}});
   await service.save(mutation(),'fake-key-only');assert.deepEqual(await service.status(r),{configured:true});await assert.rejects(service.remove(r),/Forbidden/);assert.deepEqual(await service.status(r),{configured:true});await service.remove(mutation());assert.deepEqual(await service.status(r),{configured:false});
 });
+
+test('malformed callback transaction expiry fails before token exchange',async()=>{
+ for(const expiry of [undefined,null,'9999999999999',NaN,Infinity,1000000.5]){
+  let saved,calls=0;const auth=createAccountAuth({origin,issuer,clientId:'fake',now:()=>1000000,authorize:async()=>true,sessions:createMockStore(),transactions:{async put(id,v){saved=v},async take(){return {...saved,expires:expiry}}},protocol:{async authorizationUrl(p){return 'https://identity.example/authorize?state='+p.state},async exchangeAndVerify(){calls++;return {issuer,subject:'alice'}}}});
+  const b=await auth.begin();await assert.rejects(auth.callback(new Request(origin+'/auth/oidc/callback?state='+new URL(b.url).searchParams.get('state')+'&code=fake',{headers:{cookie:b.cookie.split(';')[0]}})),/Invalid login/);assert.equal(calls,0);
+ }
+});

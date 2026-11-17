@@ -15,7 +15,7 @@ export function createAccountAuth({issuer,clientId,origin,protocol,transactions,
   };
   async function session(req){
     const token=read(req,'__Host-bolt-session');if(!token)return null;
-    const s=await sessions.get(hash(token));if(!s||s.expires<=now())return null;return await authorize({issuer:s.issuer,subject:s.subject})===true?s:null;
+    const s=await sessions.get(hash(token));if(!s||!Number.isSafeInteger(s.expires)||s.expires<=now()||typeof s.csrf!=='string'||!s.csrf)return null;return await authorize({issuer:s.issuer,subject:s.subject})===true?s:null;
   }
   return Object.freeze({
     async begin(){
@@ -30,7 +30,7 @@ export function createAccountAuth({issuer,clientId,origin,protocol,transactions,
       // Atomic consume prevents concurrent callback replay, including failed callbacks.
       const tx=await transactions.take(hash(state));
       const browser=read(req,'__Host-bolt-login');
-      if(!tx||tx.expires<=now()||!browser||!equal(tx.browser,hash(browser)))throw Error('Invalid login');
+      if(!tx||!Number.isSafeInteger(tx.expires)||tx.expires<=now()||!browser||!equal(tx.browser,hash(browser)))throw Error('Invalid login');
       // Adapter MUST validate signed ID token via pinned issuer discovery/JWKS,
       // issuer/audience/azp/exp/iat/nonce, code exchange and PKCE. No decode-only path.
       const identity=await protocol.exchangeAndVerify({issuer,clientId,redirectUri:callback,code,currentUrl:req.url,expectedState:state,codeVerifier:tx.verifier,expectedNonce:tx.nonce});

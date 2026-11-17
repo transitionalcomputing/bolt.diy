@@ -1,7 +1,9 @@
 /** Isolated workspace-only test harness. No AI key routes or project execution. */
+import {createFakeCredentialHandler} from './fake-credential-http.mjs';
 import {createAccountHandler} from '../account-keys-prototype/http.mjs';
 import {createWorkspaceImportHandler} from '../account-keys-prototype/workspace-http.mjs';
-export function createTestHandler({origin,auth,workspaces,parseArchive,html,script,now=Date.now}){
+export function createTestHandler({origin,auth,workspaces,parseArchive,html,script,fakeCredentials,now=Date.now}){
+ const fakeKeys=fakeCredentials?createFakeCredentialHandler({origin,auth,service:fakeCredentials}):null;
  const accounts=createAccountHandler({auth,accounts:null,origin});
  const upload=createWorkspaceImportHandler({origin,auth,workspaces,parseArchive:async bytes=>{const manifest=await parseArchive(bytes);if(manifest.totalBytes>4*1024*1024)throw Error('Invalid project archive');return manifest;},maxUploadBytes:8*1024*1024});
  let importing=false,window=now(),requests=0;
@@ -14,6 +16,7 @@ export function createTestHandler({origin,auth,workspaces,parseArchive,html,scri
    if(url.pathname==='/healthz'&&request.method==='GET')return json({status:'test-harness'});
    if(url.pathname==='/'&&request.method==='GET'&&!url.search)return staticResponse(html,'text/html; charset=utf-8');
    if(url.pathname==='/client.js'&&request.method==='GET'&&!url.search)return staticResponse(script,'text/javascript; charset=utf-8');
+   if(url.pathname==='/api/test-credentials')return fakeKeys?await fakeKeys(request):json({error:'Not found'},404);
    if(url.pathname==='/api/account/openai')return json({error:'Not found'},404);
    if(url.pathname==='/api/workspaces/import'){
     await auth.requireMutation(request);await auth.verifyIdentity(request);

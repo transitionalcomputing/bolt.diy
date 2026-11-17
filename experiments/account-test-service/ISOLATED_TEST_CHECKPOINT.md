@@ -59,3 +59,11 @@ The worker reran with native node:http and canonical Host; all6 expected statuse
 passed (200,401,401,401,400,404) without changing bridge/configuration. Signal/restart
 and cleanup results are recorded separately once verified. New native transport
 probe correction is locally regression-tested with a real loopback listener.
+
+Follow-through for the383 run: the worker reported native checks passed before and
+after TERM/stop/start; stopped state was exited with code0. Exact Node/PG test
+containers and their anonymous volume were removed with exit0; six existing
+services remained healthy. Nonsecret status logs and the fake database dump remain
+in the unique383 temporary test directory. The Mac UI was released for coordinated
+read-only Authentik inventory. These are execution-worker observations, not new
+local native results or proof of real identity/browser acceptance.

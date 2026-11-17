@@ -1,4 +1,5 @@
 /** Candidate separate test bootstrap. Running requires explicit reviewed secret/config injection. */
+import {createFakeCredentialService} from './fake-credentials.mjs';
 import {listenTestServer,createTestShutdown} from './lifecycle.mjs';
 import {purgeExpiredAuthRecords} from './maintenance.mjs';
 import {readFile} from 'node:fs/promises';import pg from 'pg';import {parseConfig} from './config.mjs';import {createTestHandler} from './handler.mjs';
@@ -11,9 +12,10 @@ try{
  const protocol=createProtocol({metadata:c.metadata,clientId:c.clientId,clientSecret:c.clientSecret,redirectUri:c.origin+'/auth/oidc/callback',transport:(url,options)=>fetch(url,{...options,signal:options.signal?AbortSignal.any([options.signal,AbortSignal.timeout(10000)]):AbortSignal.timeout(10000)})});
  await purgeExpiredAuthRecords(pool);cleanupTimer=setInterval(()=>{void purgeExpiredAuthRecords(pool).catch(()=>console.error('Test auth cleanup failed'));},60000);cleanupTimer.unref();
  const stores=createPostgresStores(pool),auth=createTestAuth({config:c,protocol,stores});
+ const fakeCredentials=c.fakeCredentialKey?createFakeCredentialService({auth,repository:stores.credentials,masterKey:c.fakeCredentialKey}):undefined;
  const workspaces=createWorkspaceService({auth,repository:createPostgresWorkspaceRepository(pool)});
  const html=await readFile(new URL('./public/index.html',import.meta.url),'utf8'),script=await readFile(new URL('./public/client.js',import.meta.url),'utf8');
- server=createNodeAccountServer({publicOrigin:c.origin,handler:createTestHandler({origin:c.origin,auth,workspaces,parseArchive:readInertZip,html,script})});
+ server=createNodeAccountServer({publicOrigin:c.origin,handler:createTestHandler({origin:c.origin,auth,workspaces,fakeCredentials,parseArchive:readInertZip,html,script})});
  await listenTestServer(server,{port:c.port});console.log('Isolated test harness listening');
  const shutdown=createTestShutdown({server,pool,clearMaintenance:()=>clearInterval(cleanupTimer),onFailure:message=>console.error(message)});
  const stop=()=>{void shutdown().then(()=>process.exit(0));};

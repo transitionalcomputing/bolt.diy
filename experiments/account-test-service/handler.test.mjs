@@ -11,3 +11,19 @@ test('test-only admission rejects simultaneous imports and oversized output',asy
 });
 test('test project count cap blocks the twenty-sixth import',async()=>{const f=setup();for(let i=0;i<25;i++)assert.equal((await f.handler(f.req('/api/workspaces/import','fake-alice','POST'))).status,201);assert.equal((await f.handler(f.req('/api/workspaces/import','fake-alice','POST'))).status,409);assert.equal(f.parses(),25);});
 test('global test limiter resets on next fixed time window',async()=>{let time=0;const f=setup({now:()=>time});for(let i=0;i<120;i++)assert.equal((await f.handler(f.req('/healthz'))).status,200);assert.equal((await f.handler(f.req('/healthz'))).status,429);time=60000;assert.equal((await f.handler(f.req('/healthz'))).status,200);});
+test('synthetic fixture endpoint disabled by default and explicit service can be mounted without AI route',async()=>{
+ const f=setup();assert.equal((await f.handler(f.req('/api/test-credentials'))).status,404);
+ const auth={verifyIdentity:async()=>{throw Error('Unauthenticated')}};
+ const handler=createTestHandler({origin:'https://test.example',auth,workspaces:{},parseArchive:async()=>{},html:'',script:'',fakeCredentials:{status:async r=>{await auth.verifyIdentity(r);}}});
+ assert.equal((await handler(new Request('https://test.example/api/test-credentials'))).status,401);assert.equal((await handler(new Request('https://test.example/api/account/openai'))).status,404);
+});
+test('optional mounted fixture route persists two distinct choices while raw AI route stays disabled',async()=>{
+ const {createFakeCredentialService}=await import('./fake-credentials.mjs');const {createMemoryRepository}=await import('../account-keys-prototype/vault.mjs');
+ const auth={async verifyIdentity(r){const subject=r.headers.get('cookie');if(!['alice','bob'].includes(subject))throw Error('Unauthenticated');return {issuer:'mock',subject}},async requireMutation(r){await this.verifyIdentity(r);if(r.headers.get('origin')!=='https://test.example'||r.headers.get('x-csrf-token')!=='fake')throw Error('Forbidden')}};
+ const fakeCredentials=createFakeCredentialService({auth,repository:createMemoryRepository(),masterKey:Buffer.alloc(32,9)});
+ const handler=createTestHandler({origin:'https://test.example',auth,workspaces:{},parseArchive:async()=>{},html:'',script:'',fakeCredentials});
+ const request=(method,owner,fixture)=>new Request('https://test.example/api/test-credentials',{method,headers:{cookie:owner,origin:'https://test.example','x-csrf-token':'fake','content-type':'application/json'},...(fixture?{body:JSON.stringify({fixture})}:{})});
+ assert.equal((await handler(request('PUT','alice','alpha'))).status,200);assert.equal((await handler(request('PUT','bob','beta'))).status,200);
+ assert.deepEqual(await(await handler(request('GET','alice'))).json(),{configured:true,fixture:'alpha'});assert.deepEqual(await(await handler(request('GET','bob'))).json(),{configured:true,fixture:'beta'});
+ assert.equal((await handler(new Request('https://test.example/api/account/openai'))).status,404);
+});

@@ -102,22 +102,33 @@ crash-durability guarantees. Upgraded connections are not managed by this harnes
 (which has no upgrade handler). Local tests exercise a real loopback bind conflict
 and mocked stalled shutdown; they do not replace container signal/restart testing.
 
-### Synthetic key acceptance seam (not mounted)
+### Synthetic key acceptance seam (optional test mode)
 `fake-credentials.mjs` accepts only the enum selections `alpha` and `beta`; it does
 not accept an API key string, request an OpenAI call, or expose a raw credential.
 The server maps those names to explicitly fake fixtures and uses the existing
 owner-bound encrypted vault. Status returns only configured/fixture selection so
 two test accounts can prove their different saved choices survive reconstruction.
 Current tests use in-memory persistence; native PostgreSQL/browser acceptance is
-still pending. Bootstrap and browser UI are not yet wired to this seam. A future
+still pending. The separate bootstrap can optionally mount this seam; browser UI is not yet wired. A future
 separate test deployment must provision a fresh encryption key privately and keep
 it stable across restarts; never reuse a production vault key. A real OpenAI-key
 feature requires separate reviewed integration and cannot be enabled by changing
 a fixture value in the browser.
-The separate unmounted `fake-credential-http.mjs` adapter accepts only JSON fixture
+The separate optional `fake-credential-http.mjs` adapter accepts only JSON fixture
 selection on `/api/test-credentials`; it authenticates and checks mutation origin/
 CSRF before reading a maximum128-byte body. It has no raw-key read or provider call.
 Its tests use mocked identity/CSRF and memory storage, not actual browser sessions.
 Synthetic HTTP body reading has a2second default deadline and honors request abort;
 it cancels the reader without awaiting a potentially stalled underlying cancellation.
 These bounds cover body intake, not transaction completion or blocked event loops.
+
+### Optional synthetic mode candidate (not deployed)
+The separate server can enable the fixture endpoint only with
+`TEST_FAKE_CREDENTIALS=enabled` plus a canonical base64 encoding of a fresh32-byte
+`TEST_FAKE_VAULT_KEY`. Missing/invalid mode/key fails startup; default leaves the
+route404. Inject this test encryption key privately into only the separate service,
+retain it for restart testing, and never print it or place it in source. This does
+not enable the real OpenAI-key endpoint, which remains404, nor any API calls. The
+browser UI has not yet been wired to fixture selection. Native383 test results do
+not cover this later candidate. The new configuration wiring is locally tested,
+not actual provisioning or database/browser acceptance.

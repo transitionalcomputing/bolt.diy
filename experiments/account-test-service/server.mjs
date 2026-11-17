@@ -1,4 +1,5 @@
 /** Candidate separate test bootstrap. Running requires explicit reviewed secret/config injection. */
+import {listenTestServer,createTestShutdown} from './lifecycle.mjs';
 import {purgeExpiredAuthRecords} from './maintenance.mjs';
 import {readFile} from 'node:fs/promises';import pg from 'pg';import {parseConfig} from './config.mjs';import {createTestHandler} from './handler.mjs';
 import {createProtocol} from '../oidc-library-lab/adapter.mjs';import {readInertZip} from '../oidc-library-lab/zip-intake.mjs';
@@ -13,5 +14,9 @@ try{
  const workspaces=createWorkspaceService({auth,repository:createPostgresWorkspaceRepository(pool)});
  const html=await readFile(new URL('./public/index.html',import.meta.url),'utf8'),script=await readFile(new URL('./public/client.js',import.meta.url),'utf8');
  server=createNodeAccountServer({publicOrigin:c.origin,handler:createTestHandler({origin:c.origin,auth,workspaces,parseArchive:readInertZip,html,script})});
- server.listen(c.port,'0.0.0.0',()=>console.log('Isolated test harness listening'));const stop=()=>{clearInterval(cleanupTimer);server.close(()=>pool.end());};process.once('SIGTERM',stop);process.once('SIGINT',stop);
-}catch{clearInterval(cleanupTimer);console.error('Test harness startup failed; verify private configuration');await pool?.end();process.exitCode=1;}
+ await listenTestServer(server,{port:c.port});console.log('Isolated test harness listening');
+ const shutdown=createTestShutdown({server,pool,clearMaintenance:()=>clearInterval(cleanupTimer),onFailure:message=>console.error(message)});
+ const stop=()=>{void shutdown().then(()=>process.exit(0));};
+ server.on('error',()=>{console.error('Test listener failed');void shutdown().then(()=>process.exit(1));});
+ process.once('SIGTERM',stop);process.once('SIGINT',stop);
+}catch{clearInterval(cleanupTimer);console.error('Test harness startup failed; verify private configuration');if(pool)await createTestShutdown({server:server??{close:done=>done()},pool,onFailure:message=>console.error(message)})();process.exit(1);}

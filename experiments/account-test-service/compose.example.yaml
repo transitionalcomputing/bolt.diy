@@ -2,6 +2,7 @@
 # Do not add production domains or publish the database port.
 services:
   account-test:
+    stop_grace_period: 15s
     build:
       context: ../..
       dockerfile: experiments/account-test-service/Dockerfile

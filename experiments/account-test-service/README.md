@@ -90,3 +90,14 @@ recomputed hashes; storage encryption/permissions and backups remain required.
 Fixture generation is not atomic: an existing directory is allowed and an error can
 leave earlier newly created files behind. Existing files are never overwritten.
 Stored SHA256 values are consistency checks, not authenticated provenance.
+
+### Listener lifecycle
+The candidate bootstrap awaits successful binding before reporting readiness. Bind
+failures use a fixed message. Shutdown is idempotent, allows five seconds for HTTP
+connections, then closes remaining HTTP connections; database pool shutdown has a
+separate five-second bound. The bootstrap exits after that sequence on a signal
+or listener error; startup cleanup uses the same bounds. The draft Compose
+allows 15 seconds before Docker forces termination. These are termination bounds, not transaction completion or
+crash-durability guarantees. Upgraded connections are not managed by this harness
+(which has no upgrade handler). Local tests exercise a real loopback bind conflict
+and mocked stalled shutdown; they do not replace container signal/restart testing.

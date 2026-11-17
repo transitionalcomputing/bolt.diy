@@ -2,7 +2,7 @@
 
 Experimental, nonproduction prototype preserved only on the account-workspaces branch. No application integration, real credentials, authentication configuration, or deployment changes.
 
-Run `node --test *.test.mjs` from this directory (Node24 tested; 75 tests).
+Run `node --test *.test.mjs` from this directory (Node24 tested; 76 tests).
 
 Core contract:
 - Application supplies a reviewed `verifyIdentity(request)` capability. There is deliberately no default header/cookie verifier. Tests use a WeakMap of fake request objects, not user-controlled headers.
@@ -28,7 +28,7 @@ injected and mock-only in tests: no production JWT verifier or token exchange is
 implemented. The fake adapter accepts test subjects as codes and MUST NEVER be
 selected by an application. `createMockStore` is not durable or distributed.
 
-From the repository root run `node --test experiments/account-keys-prototype/*.test.mjs`: 75 tests pass under Node24.
+From the repository root run `node --test experiments/account-keys-prototype/*.test.mjs`: 76 tests pass under Node24.
 This is not a real browser, Authentik, workerd, discovery, or JWKS verification test.
 Node crypto compatibility with the deployed workerd runtime remains unverified.
 
@@ -69,7 +69,7 @@ server-internal nonproduction facade; HTTP routing must map methods strictly,
 limit body size, enforce JSON content type, set no-store, and never expose the
 provider resolver. Direct vault access is not an authorized HTTP entry point.
 Additional tests cover Unicode input, valid CSRF with wrong Origin, concurrent
-callback replay, allowlist revocation and guard-before-write. Total: 75 tests.
+callback replay, allowlist revocation and guard-before-write. Total: 76 tests.
 
 
 ## HTTP integration seam (experimental, not mounted)

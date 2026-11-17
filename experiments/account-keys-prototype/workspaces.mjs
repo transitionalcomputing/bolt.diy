@@ -11,6 +11,10 @@ export function createWorkspaceService({auth,repository}){
    const record={version:1,id,mode:'inert',files:manifest.files.map(f=>({path:f.path,base64:f.bytes.toString('base64'),sha256:f.sha256,size:f.size})),totalBytes:manifest.totalBytes};
    await repository.create(scope,id,record);return {id,mode:'inert',fileCount:record.files.length,totalBytes:record.totalBytes};
   },
+  async list(request){
+   if(request.method!=='GET')throw Error('Method not allowed');const scope=await owner(request);
+   return structuredClone(await repository.list(scope));
+  },
   async read(request,id){
    if(request.method!=='GET')throw Error('Method not allowed');const scope=await owner(request);idCheck(id);
    const result=await repository.get(scope,id);if(!result)throw Error('Workspace not found');return structuredClone(result);
@@ -20,5 +24,5 @@ export function createWorkspaceService({auth,repository}){
 /** Tests only. This is not durable, quota-aware or a database permission boundary. */
 export function createMockWorkspaceRepository(){
  const records=new Map(),key=(owner,id)=>JSON.stringify([owner,id]);
- return Object.freeze({async create(owner,id,value){const k=key(owner,id);if(records.has(k))throw Error('Workspace exists');records.set(k,structuredClone(value));},async get(owner,id){const record=records.get(key(owner,id));return record===undefined?undefined:structuredClone(record);}});
+ return Object.freeze({async create(owner,id,value){const k=key(owner,id);if(records.has(k))throw Error('Workspace exists');records.set(k,structuredClone(value));},async list(owner){return [...records.entries()].filter(([k])=>JSON.parse(k)[0]===owner).slice(0,50).map(([,r])=>({id:r.id,mode:r.mode,fileCount:r.files.length,totalBytes:r.totalBytes}));},async get(owner,id){const record=records.get(key(owner,id));return record===undefined?undefined:structuredClone(record);}});
 }

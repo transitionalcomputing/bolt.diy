@@ -1,0 +1,1 @@
+{"name":"bolt-account-test-service","private":true,"type":"module","version":"0.0.1","scripts":{"test":"node --test *.test.mjs","start":"node server.mjs"},"dependencies":{"openid-client":"6.9.0","yauzl":"3.4.0","pg":"8.16.3"}}

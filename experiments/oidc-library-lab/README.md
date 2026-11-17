@@ -49,7 +49,7 @@ References:
 - https://github.com/panva/openid-client/blob/main/docs/functions/enableNonRepudiationChecks.md
 - https://docs.goauthentik.io/add-secure-apps/providers/oauth2/
 
-To test the orchestration suite too, run `node --test ../account-keys-prototype/*.test.mjs` from this directory (75 tests). Neither suite makes real provider requests.
+To test the orchestration suite too, run `node --test ../account-keys-prototype/*.test.mjs` from this directory (76 tests). Neither suite makes real provider requests.
 
 `node sqlite-runtime-probe.mjs` is a negative compatibility check for the separate
 Node SQLite experiment. On this local workerd binary, DatabaseSync throws
@@ -171,3 +171,11 @@ and newly logged-in synthetic clients regain only their own snapshots. Session d
 uses SQLite in this test; workspace data uses PGlite. This is no longer only a mock
 workspace repository, but remains fake IdP transport with constructed Request/cookie
 objects, not real browsers, Authentik or multi-connection PostgreSQL.
+
+Two jsdom tests now exercise the separate test-harness UI itself, including safe
+metadata rendering, CSRF upload and failed-signout handling. Lab total:25 tests.
+Actual browser/TLS/Authentik/cookie behavior still needs the separately approved
+and provisioned test environment.
+
+The additional PGlite maintenance test verifies expired transaction/session deletion
+while retaining current sessions and credential records. Lab total:26 tests.

@@ -1,0 +1,14 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {JSDOM} from 'jsdom';import {readFile} from 'node:fs/promises';
+const html=await readFile(new URL('../account-test-service/public/index.html',import.meta.url),'utf8'),script=await readFile(new URL('../account-test-service/public/client.js',import.meta.url),'utf8');
+async function waitUntil(check){for(let i=0;i<30;i++){if(check())return;await new Promise(r=>setTimeout(r,2));}throw Error('DOM condition not reached');}
+test('test browser shell lists text safely and submits inert ZIP with session CSRF',async()=>{
+ const dom=new JSDOM(html,{url:'https://test.example',runScripts:'outside-only'}),calls=[];let imported=false;
+ dom.window.fetch=async(path,options)=>{calls.push({path,options});if(path==='/api/account/session')return Response.json({csrfToken:'fake-csrf'});if(path==='/api/workspaces')return Response.json({projects:imported?[{id:'<img src=x onerror=alert(1)>',fileCount:2,totalBytes:4}]:[]});if(path==='/api/workspaces/import'){imported=true;return Response.json({id:'fake'},{status:201})}throw Error('Unexpected call');};
+ try{dom.window.eval(script);const doc=dom.window.document;await waitUntil(()=>!doc.getElementById('submit').disabled);const file=new dom.window.File(['fakezip'],'test.zip',{type:'application/zip'});Object.defineProperty(doc.getElementById('archive'),'files',{value:[file]});doc.getElementById('upload').dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));await waitUntil(()=>doc.querySelectorAll('#projects li').length===1);
+ assert.equal(doc.querySelectorAll('#projects img').length,0);assert.match(doc.querySelector('#projects a').textContent,/<img/);const upload=calls.find(c=>c.path==='/api/workspaces/import');assert.equal(upload.options.headers['x-csrf-token'],'fake-csrf');assert.equal(upload.options.body,file);assert.equal(upload.options.redirect,'error');assert.equal(upload.options.credentials,'same-origin');assert.equal(dom.window.localStorage.length,0);
+ }finally{dom.window.close();}
+});
+test('failed signout clears listed projects without claiming successful logout',async()=>{
+ const dom=new JSDOM(html,{url:'https://test.example',runScripts:'outside-only'});dom.window.fetch=async path=>{if(path==='/api/account/session')return Response.json({csrfToken:'fake'});if(path==='/api/workspaces')return Response.json({projects:[{id:'fake',fileCount:1,totalBytes:1}]});return new Response('',{status:500});};
+ try{dom.window.eval(script);const doc=dom.window.document;await waitUntil(()=>!doc.getElementById('logout').disabled);doc.getElementById('logout').click();await waitUntil(()=>doc.getElementById('status').textContent.startsWith('Sign out failed'));assert.equal(doc.querySelectorAll('#projects li').length,0);assert.equal(doc.getElementById('submit').disabled,true);}finally{dom.window.close();}
+});

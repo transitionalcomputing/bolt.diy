@@ -1,0 +1,50 @@
+# DRAFT ONLY: requires separate security approval, image validation and secure provisioning.
+# Do not add production domains or publish the database port.
+services:
+  account-test:
+    build:
+      context: ../..
+      dockerfile: experiments/account-test-service/Dockerfile
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 1g
+    cpus: 1
+    environment:
+      TEST_ORIGIN: ${TEST_ORIGIN:?set approved test origin}
+      OIDC_METADATA_JSON: ${OIDC_METADATA_JSON:?set verified provider metadata}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:?set separate test client}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:?secure injection only}
+      OIDC_ALLOWED_SUBJECTS_JSON: ${OIDC_ALLOWED_SUBJECTS_JSON:?exactly two verified subjects}
+      DATABASE_URL: ${TEST_DATABASE_URL:?runtime role only}
+      DATABASE_TLS: ${DATABASE_TLS:?explicit reviewed TLS mode}
+    expose: ["3000"]
+    networks: [app, database]
+    depends_on:
+      database: {condition: service_healthy}
+  database:
+    image: postgres:17-bookworm
+    restart: unless-stopped
+    mem_limit: 1g
+    cpus: 1
+    environment:
+      POSTGRES_DB: bolt_account_test
+      POSTGRES_USER: bolt_test_admin
+      POSTGRES_PASSWORD: ${TEST_DB_ADMIN_PASSWORD:?secure injection only}
+    volumes: [test-postgres:/var/lib/postgresql/data]
+    networks: [database]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U bolt_test_admin -d bolt_account_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+networks:
+  app: {}
+  database: {internal: true}
+volumes:
+  test-postgres: {}
+# No automatic SQL migration/grant step. Provision tables and restricted runtime role
+# separately before starting app; do not give app the admin connection string.
+# No routing labels here: actual proxy/tunnel network and TLS plan require review.

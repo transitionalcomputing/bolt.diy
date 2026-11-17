@@ -2,7 +2,7 @@
 
 Experimental, nonproduction prototype preserved only on the account-workspaces branch. No application integration, real credentials, authentication configuration, or deployment changes.
 
-Run `node --test *.test.mjs` from this directory (Node24 tested; 61 tests).
+Run `node --test *.test.mjs` from this directory (Node24 tested; 66 tests).
 
 Core contract:
 - Application supplies a reviewed `verifyIdentity(request)` capability. There is deliberately no default header/cookie verifier. Tests use a WeakMap of fake request objects, not user-controlled headers.
@@ -28,7 +28,7 @@ injected and mock-only in tests: no production JWT verifier or token exchange is
 implemented. The fake adapter accepts test subjects as codes and MUST NEVER be
 selected by an application. `createMockStore` is not durable or distributed.
 
-From the repository root run `node --test experiments/account-keys-prototype/*.test.mjs`: 61 tests pass under Node24.
+From the repository root run `node --test experiments/account-keys-prototype/*.test.mjs`: 66 tests pass under Node24.
 This is not a real browser, Authentik, workerd, discovery, or JWKS verification test.
 Node crypto compatibility with the deployed workerd runtime remains unverified.
 
@@ -69,7 +69,7 @@ server-internal nonproduction facade; HTTP routing must map methods strictly,
 limit body size, enforce JSON content type, set no-store, and never expose the
 provider resolver. Direct vault access is not an authorized HTTP entry point.
 Additional tests cover Unicode input, valid CSRF with wrong Origin, concurrent
-callback replay, allowlist revocation and guard-before-write. Total: 61 tests.
+callback replay, allowlist revocation and guard-before-write. Total: 66 tests.
 
 
 ## HTTP integration seam (experimental, not mounted)
@@ -260,3 +260,30 @@ A separate PGlite lab now executes this draft SQL against local PostgreSQL-WASM
 rather than only a fake query client. It verifies JSONB/upsert/constraint/query
 semantics and file-backed reopen with fake encrypted data. It remains single-user,
 not server concurrency, real permissions or Supabase deployment validation.
+
+
+## Inert project intake prototype
+
+`inert-import.mjs` is a pure Node-only validation/snapshot seam, not a route,
+archive extractor or persistent workspace. Five tests preserve binary bytes and
+hashes, copy caller buffers, leave package scripts unchanged/unexecuted, and reject
+traversal/ambiguous paths, case collisions, file-directory conflicts, special
+Windows names, `.git`, unknown metadata including symlinks and client owner fields,
+and count/per-file/aggregate limits. Paths must already be NFC; no silent renaming.
+The returned bytes remain mutable server-internal data: persist/revalidate them
+without handing the buffer to untrusted code. This is not a signed manifest.
+
+Inputs are ordinary in-memory records with Uint8Array bytes, after a future trusted
+parser. No ZIP decompression, ZIP-bomb protection, network/file extraction, malware
+or secret scanning, archive metadata validation or actual migration is implemented.
+Limits bound the resulting snapshot, not allocations already performed by a caller
+or parser. Future parsing must enforce limits while streaming/decompressing and
+reject symlinks before converting entries to this shape. The current allowlist is
+conservative, not a portable filesystem-security guarantee.
+
+There is deliberately no owner parameter: the future service must authenticate
+and authorize a session, derive immutable issuer/subject ownership, and atomically
+persist the manifest and bytes in that user's namespace. This pure module does not
+prove ownership isolation. Imported files must remain inert until a separate,
+explicit authorized execution step. Do not feed the result to existing Bolt ZIP
+import/autostart paths. No browser storage migration or production imports occurred.

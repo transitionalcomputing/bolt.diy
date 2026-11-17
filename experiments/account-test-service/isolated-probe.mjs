@@ -1,6 +1,11 @@
 /** Fake-only smoke probe for the network-none candidate container. Never follows redirects. */
 import {pathToFileURL} from 'node:url';
-export async function runIsolatedProbe(transport=fetch){
+import {request} from 'node:http';
+export async function nativeLoopbackProbe(url,options){
+ const target=new URL(url);if(target.origin!=='http://127.0.0.1:3000')throw Error('Invalid probe target');
+ return new Promise((resolve,reject)=>{const req=request(target,{method:options.method,headers:options.headers,signal:options.signal},res=>{resolve({status:res.statusCode,body:{cancel:async()=>{res.destroy();}}});});req.on('error',()=>reject(Error('Isolated readiness check failed')));req.end();});
+}
+export async function runIsolatedProbe(transport=nativeLoopbackProbe){
  const checks=[['health','GET','/healthz',200],['session denied','GET','/api/account/session',401],['list denied','GET','/api/workspaces',401],['upload denied','POST','/api/workspaces/import',401],['invalid callback','GET','/auth/oidc/callback',400],['AI disabled','GET','/api/account/openai',404]];
  const results=[];
  for(const [name,method,path,expected] of checks){

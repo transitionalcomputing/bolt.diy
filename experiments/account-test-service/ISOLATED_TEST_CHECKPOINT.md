@@ -47,3 +47,15 @@ candidate for the next isolated test, not the cached af5c0a image.
 
 Real Authentik/DNS/TLS test provisioning still requires exact verified configuration
 and applicable action-time approval. Browser ownership must be handed off explicitly.
+
+## Native383 candidate check (execution-worker report)
+
+The rebuilt383a3ade image and no-config fail-closed check passed. A fresh isolated
+SCRAM PG plus valid fake-config Node bootstrap reached the listening state. The
+original fetch-based probe returned400 on all paths: locally reproduced Node24
+fetch silently replaced the requested canonical Host with loopback host/port.
+This was a probe defect, not a reason to weaken the server's Host validation.
+The worker reran with native node:http and canonical Host; all6 expected statuses
+passed (200,401,401,401,400,404) without changing bridge/configuration. Signal/restart
+and cleanup results are recorded separately once verified. New native transport
+probe correction is locally regression-tested with a real loopback listener.

@@ -106,3 +106,17 @@ vault. The manifest then uses BOLT_TEST_PRIVATE_DIR=/data/bolt-account-test-secr
 
 The healthcheck socket has a3second idle timeout; the manifest supplies the overall
 5second process timeout. Neither implies successful real browser authentication.
+
+### Preserve shared proxy default route
+
+Before attaching the new frontend, inspect the proxy's existing selected default
+route and gateway priorities. Docker's highest `gw-priority` selects the gateway;
+verify CLI support and set the new attachment strictly lower than the current
+selected priority (for example -1 only when the current selection is greater).
+Do not change existing endpoint priorities. Compare the default route afterward
+and detach only the new endpoint if it changed unexpectedly. Equal-priority blind
+attachment is not acceptable on the shared production proxy. Source:
+https://docs.docker.com/reference/cli/docker/network/connect/
+
+If CLI support or current priority cannot be established, stop and report; do not
+fall back to equal-priority attachment.

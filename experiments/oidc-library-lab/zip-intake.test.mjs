@@ -15,3 +15,11 @@ test('directory prefixes reject files in either order but allow directory childr
   const out=await readInertZip(zip(entries));assert.equal(out.files.length,1);assert.equal(out.files[0].path,'x/y');
  }
 });
+test('ZIP manifest can enter owner-scoped inert service without autorun',async()=>{
+ const {createWorkspaceService,createMockWorkspaceRepository}=await import('../account-keys-prototype/workspaces.mjs');const identities=new WeakMap();
+ const auth={async verifyIdentity(r){const p=identities.get(r);if(!p)throw Error('Unauthenticated');return p},async requireMutation(r){await this.verifyIdentity(r);if(r.headers.get('origin')!=='https://test.example'||r.headers.get('x-csrf-token')!=='fake')throw Error('Forbidden')}};
+ const service=createWorkspaceService({auth,repository:createMockWorkspaceRepository()});const req=(subject,method)=>{const r=new Request('https://test.example/import',{method,headers:{origin:'https://test.example','x-csrf-token':'fake'}});identities.set(r,{issuer:'mock',subject});return r};
+ const parsed=await readInertZip(zip([{path:'logo.bin',data:Buffer.from([0,255])},{path:'package.json',data:'{"scripts":{"postinstall":"never-run"}}'}]));
+ const result=await service.create(req('alice','POST'),{files:parsed.files.map(({path,bytes})=>({path,bytes}))});const record=await service.read(req('alice','GET'),result.id);
+ assert.equal(record.mode,'inert');assert.equal(record.files[0].base64,'AP8=');await assert.rejects(service.read(req('bob','GET'),result.id),/Workspace not found/);
+});

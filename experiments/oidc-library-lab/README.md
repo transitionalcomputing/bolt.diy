@@ -49,7 +49,7 @@ References:
 - https://github.com/panva/openid-client/blob/main/docs/functions/enableNonRepudiationChecks.md
 - https://docs.goauthentik.io/add-secure-apps/providers/oauth2/
 
-To test the orchestration suite too, run `node --test ../account-keys-prototype/*.test.mjs` from this directory (66 tests). Neither suite makes real provider requests.
+To test the orchestration suite too, run `node --test ../account-keys-prototype/*.test.mjs` from this directory (70 tests). Neither suite makes real provider requests.
 
 `node sqlite-runtime-probe.mjs` is a negative compatibility check for the separate
 Node SQLite experiment. On this local workerd binary, DatabaseSync throws
@@ -130,7 +130,7 @@ See https://pglite.dev/docs/about and https://github.com/electric-sql/pglite.
 size validation, then the pure inert-manifest validator. Five synthetic ZIP tests
 cover binary preservation, compressed package text, traversal/symlink/encryption,
 CRC corruption, false and excessive declared sizes, a highly compressed oversized
-payload, collisions and file-count limits. This increases this lab to 21 tests.
+payload, collisions and file-count limits. This increases this lab to 22 tests.
 No archive was downloaded, extracted to disk, imported into Bolt or executed.
 
 The parser snapshots at most 32 MiB compressed input, allows at most 2,000 total
@@ -149,3 +149,9 @@ OS portability, MIME/secret/malware inspection, signed provenance, ownership and
 atomic durable persistence are not validated by these five tests. Returned manifest
 buffers remain internal mutable data. Package scripts are retained inert, never run.
 Official library guidance: https://github.com/thejoshwolfe/yauzl
+
+
+One additional synthetic test composes parsed ZIP bytes with the owner-scoped
+workspace service and its Map repository: Alice restores binary data while Bob is
+denied. It makes no network calls, uses fake identity/CSRF and neither executes
+package scripts nor proves production session or persistent-database isolation.

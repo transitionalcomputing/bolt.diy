@@ -2,7 +2,7 @@
 
 Experimental, nonproduction prototype preserved only on the account-workspaces branch. No application integration, real credentials, authentication configuration, or deployment changes.
 
-Run `node --test *.test.mjs` from this directory (Node24 tested; 66 tests).
+Run `node --test *.test.mjs` from this directory (Node24 tested; 70 tests).
 
 Core contract:
 - Application supplies a reviewed `verifyIdentity(request)` capability. There is deliberately no default header/cookie verifier. Tests use a WeakMap of fake request objects, not user-controlled headers.
@@ -28,7 +28,7 @@ injected and mock-only in tests: no production JWT verifier or token exchange is
 implemented. The fake adapter accepts test subjects as codes and MUST NEVER be
 selected by an application. `createMockStore` is not durable or distributed.
 
-From the repository root run `node --test experiments/account-keys-prototype/*.test.mjs`: 66 tests pass under Node24.
+From the repository root run `node --test experiments/account-keys-prototype/*.test.mjs`: 70 tests pass under Node24.
 This is not a real browser, Authentik, workerd, discovery, or JWKS verification test.
 Node crypto compatibility with the deployed workerd runtime remains unverified.
 
@@ -69,7 +69,7 @@ server-internal nonproduction facade; HTTP routing must map methods strictly,
 limit body size, enforce JSON content type, set no-store, and never expose the
 provider resolver. Direct vault access is not an authorized HTTP entry point.
 Additional tests cover Unicode input, valid CSRF with wrong Origin, concurrent
-callback replay, allowlist revocation and guard-before-write. Total: 66 tests.
+callback replay, allowlist revocation and guard-before-write. Total: 70 tests.
 
 
 ## HTTP integration seam (experimental, not mounted)
@@ -291,3 +291,26 @@ import/autostart paths. No browser storage migration or production imports occur
 A separate isolated `oidc-library-lab/zip-intake.mjs` now prototypes bounded ZIP
 parsing before this validator. Its safeguards and substantial production gates are
 documented there; it is not integrated into any HTTP upload or live application.
+
+
+## Owner-scoped immutable workspace seam
+
+`workspaces.mjs` is a server-internal prototype, not an HTTP route or Bolt storage
+replacement. Each create requires a mutation-authorized session; read resolves a
+fresh verified identity. The namespace derives only from issuer/subject, never from
+client owner fields or forwarded headers. Random server-generated IDs do not replace
+ownership checks. Complete validated binary snapshots are stored as inert base64 +
+SHA256 records through an injected atomic-create-if-absent repository contract.
+The only supplied repository is a clone-on-read/write Map mock. Four tests cover
+synthetic clients for one account, cross-user/issuer and header-forgery rejection,
+revocation, mutation checks, validation before write, parallel owners and service
+reconstruction. Reconstruction is not process restart or durable persistence.
+
+No live accounts, project migration, listing/editing/deletion, browser autosave,
+execution or workspace filesystem mounting are implemented. No byte quotas per
+account, idempotency, resource accounting, database privileges, durable atomicity,
+backup/restore or corrupted-store validation are demonstrated. The repository is a
+trusted server-only capability; returned record bytes/metadata are not safe HTML or
+trusted instructions. Base64 is not encryption; projects may contain secrets and
+must remain private with storage encryption/access policy designed before deployment.
+The real session adapter rechecks authorization; tests here use explicit mock auth.

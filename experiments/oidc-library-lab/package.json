@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Experimental fake-only OIDC verification lab; not app integrated",
   "scripts": {
-    "test": "node --test library.test.mjs account-integration.test.mjs",
+    "test": "node --test library.test.mjs account-integration.test.mjs ui-dom.test.mjs",
     "test:workerd": "node workerd-test.mjs"
   },
   "keywords": [],
@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "esbuild": "0.28.2",
+    "jsdom": "31.0.1",
     "miniflare": "4.20260730.0"
   },
   "private": true

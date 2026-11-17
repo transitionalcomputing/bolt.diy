@@ -15,7 +15,7 @@ contact external services. Node test global fetch throws and the protocol uses a
 closed mocked token/JWKS transport. Workerd outboundService throws.
 
 Verified locally with Node24.22.1: openid-client6.9.0, oauth4webapi3.8.8,
-jose6.2.17. Twelve library/integration tests pass: valid signed RS256 identity, rejection of
+jose6.2.17. Fourteen library/integration/virtual-DOM tests pass: valid signed RS256 identity, rejection of
 wrong signature/issuer/audience/nonce/expiry/state, missing ID token, unknown kid,
 and foreign metadata endpoint. Actual JWS validation is explicitly enabled with
 openid-client enableNonRepudiationChecks, not merely decoded claims.
@@ -49,7 +49,7 @@ References:
 - https://github.com/panva/openid-client/blob/main/docs/functions/enableNonRepudiationChecks.md
 - https://docs.goauthentik.io/add-secure-apps/providers/oauth2/
 
-To test the orchestration suite too, run `node --test ../account-keys-prototype/*.test.mjs` from this directory (53 tests). Neither suite makes real provider requests.
+To test the orchestration suite too, run `node --test ../account-keys-prototype/*.test.mjs` from this directory (58 tests). Neither suite makes real provider requests.
 
 `node sqlite-runtime-probe.mjs` is a negative compatibility check for the separate
 Node SQLite experiment. On this local workerd binary, DatabaseSync throws
@@ -99,3 +99,9 @@ PKCE coverage: the composed fake identity provider now compares the S256 hash
 of the submitted verifier with the challenge recorded at authorization. A wrong
 verifier is rejected and normal mock login succeeds. This is synthetic protocol
 coverage, not verification of the real Authentik provider configuration.
+
+
+Virtual DOM tests use isolated jsdom as a development-only dependency. No scripts
+or resources are loaded from real sites. They verify input clearing, button/status
+updates and safe error text. This is not a real browser test and does not validate
+browser cookie policy, TLS, redirects through the actual proxy or accessibility.

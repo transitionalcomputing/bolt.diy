@@ -2,7 +2,7 @@
 
 Experimental, nonproduction prototype preserved only on the account-workspaces branch. No application integration, real credentials, authentication configuration, or deployment changes.
 
-Run `node --test *.test.mjs` from this directory (Node24 tested; 53 tests).
+Run `node --test *.test.mjs` from this directory (Node24 tested; 58 tests).
 
 Core contract:
 - Application supplies a reviewed `verifyIdentity(request)` capability. There is deliberately no default header/cookie verifier. Tests use a WeakMap of fake request objects, not user-controlled headers.
@@ -28,7 +28,7 @@ injected and mock-only in tests: no production JWT verifier or token exchange is
 implemented. The fake adapter accepts test subjects as codes and MUST NEVER be
 selected by an application. `createMockStore` is not durable or distributed.
 
-From the repository root run `node --test experiments/account-keys-prototype/*.test.mjs`: 53 tests pass under Node24.
+From the repository root run `node --test experiments/account-keys-prototype/*.test.mjs`: 58 tests pass under Node24.
 This is not a real browser, Authentik, workerd, discovery, or JWKS verification test.
 Node crypto compatibility with the deployed workerd runtime remains unverified.
 
@@ -69,7 +69,7 @@ server-internal nonproduction facade; HTTP routing must map methods strictly,
 limit body size, enforce JSON content type, set no-store, and never expose the
 provider resolver. Direct vault access is not an authorized HTTP entry point.
 Additional tests cover Unicode input, valid CSRF with wrong Origin, concurrent
-callback replay, allowlist revocation and guard-before-write. Total: 53 tests.
+callback replay, allowlist revocation and guard-before-write. Total: 58 tests.
 
 
 ## HTTP integration seam (experimental, not mounted)
@@ -203,3 +203,31 @@ client disconnect at a local loopback socket, plus caller cancellation reaching
 the fake provider transport. No live upstream cancellation was tested. Responses
 already returned as streams do not have a total stream lifetime deadline; that
 and full production streaming behavior remain unresolved.
+
+
+## Application assembly and settings UI experiment
+`application.mjs` composes explicit server-owned protocol/storage/authorization/
+master-key/provider dependencies into account HTTP handling plus an internal
+provider capability. It starts no listener and reads no existing environment
+credentials. `settings-client.mjs` includes a browser controller and a small DOM
+mount function for connected status, password-input save and removal. Controller
+state never contains the credential; the input is cleared immediately on submit.
+JavaScript strings cannot be reliably erased from memory; no claim of secure
+memory wiping is made. There is no localStorage/cookie credential persistence.
+
+Five controller/assembly tests cover fake-controller behavior, duplicate request suppression,
+fixed errors and controller-to-assembled-service isolation across fake Alice/Bob
+sessions. They use synthetic Fetch requests, not actual browser cookies. Separate jsdom
+tests exercise mounting, immediate input clearing, pending button state, connected
+status and hostile-error text handling. Actual browser, cookie, TLS and
+accessibility behavior still need validation; nothing is mounted in the live app. This UI is credential settings,
+not account-persistent project storage.
+
+Project migration is a distinct future capability: current project imports and
+browser-local storage must not be assumed owner-isolated. An account workspace
+import should preserve binary files and hashes, validate archive paths/limits,
+bind ownership only to verified session identity, and remain inert until a user
+explicitly chooses to run code. No migration or project execution is implemented.
+
+The settings client rejects Fetch redirects and clears stale connected/CSRF state
+after failures. These policies are asserted by fake tests, not real proxy tests.

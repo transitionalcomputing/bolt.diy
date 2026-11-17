@@ -287,3 +287,7 @@ persist the manifest and bytes in that user's namespace. This pure module does n
 prove ownership isolation. Imported files must remain inert until a separate,
 explicit authorized execution step. Do not feed the result to existing Bolt ZIP
 import/autostart paths. No browser storage migration or production imports occurred.
+
+A separate isolated `oidc-library-lab/zip-intake.mjs` now prototypes bounded ZIP
+parsing before this validator. Its safeguards and substantial production gates are
+documented there; it is not integrated into any HTTP upload or live application.

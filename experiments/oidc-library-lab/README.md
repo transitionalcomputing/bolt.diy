@@ -122,3 +122,30 @@ Close/reopen is not a separate process or crash/power-loss test. This establishe
 SQL compatibility in this engine, not deployed PostgreSQL version compatibility,
 RLS/authenticated roles/PostgREST permissions, TLS, pooling or operational durability.
 See https://pglite.dev/docs/about and https://github.com/electric-sql/pglite.
+
+
+## Bounded inert ZIP intake lab
+
+`zip-intake.mjs` uses pinned yauzl with lazy sequential entries, strict names and
+size validation, then the pure inert-manifest validator. Five synthetic ZIP tests
+cover binary preservation, compressed package text, traversal/symlink/encryption,
+CRC corruption, false and excessive declared sizes, a highly compressed oversized
+payload, collisions and file-count limits. This increases this lab to 21 tests.
+No archive was downloaded, extracted to disk, imported into Bolt or executed.
+
+The parser snapshots at most 32 MiB compressed input, allows at most 2,000 total
+entries / 1,000 files, 8 MiB per output file and 32 MiB total output. Both advertised
+and actual streamed sizes are checked. Only stored/deflate methods are accepted;
+special Unix types and encrypted entries are rejected. CRC32 detects corruption,
+not authenticity. A five-second cooperative deadline destroys the active stream;
+this is not hard CPU/memory isolation or a proven cancellation benchmark. Temporary
+copies mean peak memory exceeds raw payload limits. The caller must bound uploads
+before buffering, authenticate/authorize and rate-limit, and use a resource-isolated
+worker before accepting real untrusted archives. No recursive archive processing.
+
+Parser semantics use central-directory names; original archive bytes must not later
+be fed to a different extractor. ZIP64/Unicode metadata/interoperability fuzzing,
+OS portability, MIME/secret/malware inspection, signed provenance, ownership and
+atomic durable persistence are not validated by these five tests. Returned manifest
+buffers remain internal mutable data. Package scripts are retained inert, never run.
+Official library guidance: https://github.com/thejoshwolfe/yauzl

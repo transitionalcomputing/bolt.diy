@@ -163,3 +163,11 @@ It verifies two fake owners recover their binary bytes, cross-owner reads fail,
 duplicate creation cannot overwrite and missing metadata is rejected. This is not
 an Authentik login or separate OS process/crash test, and database privileges remain
 unverified. No existing Supabase or live Bolt database is used.
+
+The composed account lifecycle test now also uses the real signed synthetic OIDC
+adapter plus actual ZIP parser/upload handler and disk-backed workspace SQL adapter.
+Alice and Bob import fake binary projects, the workspace engine is closed/reopened,
+and newly logged-in synthetic clients regain only their own snapshots. Session data
+uses SQLite in this test; workspace data uses PGlite. This is no longer only a mock
+workspace repository, but remains fake IdP transport with constructed Request/cookie
+objects, not real browsers, Authentik or multi-connection PostgreSQL.

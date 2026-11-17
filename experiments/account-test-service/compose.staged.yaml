@@ -1,0 +1,70 @@
+# Separate test only. Do not activate until exact approval, review and baseline checks.
+name: bolt-account-test
+services:
+  app:
+    image: ${BOLT_TEST_IMAGE:?set exact reviewed image}
+    container_name: bolt-account-test-app
+    restart: unless-stopped
+    stop_grace_period: 15s
+    user: node
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 1g
+    cpus: 1
+    pids_limit: 128
+    env_file:
+      - path: ${BOLT_TEST_PRIVATE_DIR:?set private directory}/app.env
+        format: raw
+    networks: [frontend, backend]
+    depends_on:
+      database: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, node, experiments/account-test-service/healthcheck.mjs]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options: {max-size: 5m, max-file: '2'}
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: bolt-account-test-front
+      traefik.http.routers.bolt-account-test-isolated.rule: Host(`bolt-test.signallayerit.com`)
+      traefik.http.routers.bolt-account-test-isolated.entrypoints: https
+      traefik.http.routers.bolt-account-test-isolated.tls: 'true'
+      traefik.http.routers.bolt-account-test-isolated.tls.certresolver: letsencrypt
+      traefik.http.routers.bolt-account-test-isolated.service: bolt-account-test-isolated
+      traefik.http.services.bolt-account-test-isolated.loadbalancer.server.port: '3000'
+  database:
+    image: postgres:17-bookworm
+    container_name: bolt-account-test-db
+    restart: unless-stopped
+    stop_grace_period: 30s
+    mem_limit: 1g
+    cpus: 1
+    pids_limit: 128
+    env_file:
+      - path: ${BOLT_TEST_PRIVATE_DIR:?set private directory}/database.env
+        format: raw
+    networks: [backend]
+    volumes:
+      - database:/var/lib/postgresql/data
+      - ../account-keys-prototype/postgres-schema.sql:/docker-entrypoint-initdb.d/00-records.sql:ro
+      - ../account-keys-prototype/workspace-schema.sql:/docker-entrypoint-initdb.d/01-workspaces.sql:ro
+      - ./initialize-runtime-role.sh:/docker-entrypoint-initdb.d/02-runtime-role.sh:ro
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U bolt_test_admin -d bolt_account_test']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging:
+      driver: json-file
+      options: {max-size: 5m, max-file: '2'}
+networks:
+  frontend: {name: bolt-account-test-front, driver: bridge}
+  backend: {name: bolt-account-test-back, driver: bridge, internal: true}
+volumes:
+  database: {name: bolt-account-test-db-data}

@@ -2,7 +2,7 @@
 
 Experimental, nonproduction prototype preserved only on the account-workspaces branch. No application integration, real credentials, authentication configuration, or deployment changes.
 
-Run `node --test *.test.mjs` from this directory (Node24 tested; 70 tests).
+Run `node --test *.test.mjs` from this directory (Node24 tested; 75 tests).
 
 Core contract:
 - Application supplies a reviewed `verifyIdentity(request)` capability. There is deliberately no default header/cookie verifier. Tests use a WeakMap of fake request objects, not user-controlled headers.
@@ -28,7 +28,7 @@ injected and mock-only in tests: no production JWT verifier or token exchange is
 implemented. The fake adapter accepts test subjects as codes and MUST NEVER be
 selected by an application. `createMockStore` is not durable or distributed.
 
-From the repository root run `node --test experiments/account-keys-prototype/*.test.mjs`: 70 tests pass under Node24.
+From the repository root run `node --test experiments/account-keys-prototype/*.test.mjs`: 75 tests pass under Node24.
 This is not a real browser, Authentik, workerd, discovery, or JWKS verification test.
 Node crypto compatibility with the deployed workerd runtime remains unverified.
 
@@ -69,7 +69,7 @@ server-internal nonproduction facade; HTTP routing must map methods strictly,
 limit body size, enforce JSON content type, set no-store, and never expose the
 provider resolver. Direct vault access is not an authorized HTTP entry point.
 Additional tests cover Unicode input, valid CSRF with wrong Origin, concurrent
-callback replay, allowlist revocation and guard-before-write. Total: 70 tests.
+callback replay, allowlist revocation and guard-before-write. Total: 75 tests.
 
 
 ## HTTP integration seam (experimental, not mounted)
@@ -314,3 +314,27 @@ trusted server-only capability; returned record bytes/metadata are not safe HTML
 trusted instructions. Base64 is not encryption; projects may contain secrets and
 must remain private with storage encryption/access policy designed before deployment.
 The real session adapter rechecks authorization; tests here use explicit mock auth.
+
+
+## Unmounted upload boundary
+
+`workspace-http.mjs` prototypes POST `/api/workspaces/import` as a Fetch handler.
+It requires verified session and mutation/Origin/CSRF authorization before consuming
+body bytes or invoking the injected archive parser. It bounds declared and streamed
+upload size, cancels the reader on abort, returns fixed errors and no-store JSON,
+and delegates to the service which rechecks authorization before write. Five tests
+use fake auth/parser and memory storage; they prove no body consumption/parser/write
+for rejected authorization, size/type rejection, inert binary snapshot, redacted
+parser errors, mid-parse revocation and upload-wait cancellation.
+
+This route is not mounted or connected to real auth, sockets or app imports. A
+server bridge must supply trusted canonical origins, upload timeouts, rate limits,
+concurrency/quotas and resource isolation. Parser work is not interrupted mid-parse
+by this boundary; abort is checked before/after parsing, so a bounded cooperative
+parser or isolated worker is still required. A parser failure writes nothing, but
+DB permission/transaction/durability guarantees remain untested. No cross-browser
+live account persistence is claimed by synthetic Request tests.
+
+Authorization and cancellation checks occur before write, not atomically with the
+storage commit. Revocation or abort racing an in-flight commit may still leave an
+inert snapshot saved; production must define this behavior and audit/retry semantics.

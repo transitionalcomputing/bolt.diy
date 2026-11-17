@@ -2,7 +2,7 @@
 
 Experimental, nonproduction prototype preserved only on the account-workspaces branch. No application integration, real credentials, authentication configuration, or deployment changes.
 
-Run `node --test *.test.mjs` from this directory (Node24 tested; 58 tests).
+Run `node --test *.test.mjs` from this directory (Node24 tested; 61 tests).
 
 Core contract:
 - Application supplies a reviewed `verifyIdentity(request)` capability. There is deliberately no default header/cookie verifier. Tests use a WeakMap of fake request objects, not user-controlled headers.
@@ -28,7 +28,7 @@ injected and mock-only in tests: no production JWT verifier or token exchange is
 implemented. The fake adapter accepts test subjects as codes and MUST NEVER be
 selected by an application. `createMockStore` is not durable or distributed.
 
-From the repository root run `node --test experiments/account-keys-prototype/*.test.mjs`: 58 tests pass under Node24.
+From the repository root run `node --test experiments/account-keys-prototype/*.test.mjs`: 61 tests pass under Node24.
 This is not a real browser, Authentik, workerd, discovery, or JWKS verification test.
 Node crypto compatibility with the deployed workerd runtime remains unverified.
 
@@ -69,7 +69,7 @@ server-internal nonproduction facade; HTTP routing must map methods strictly,
 limit body size, enforce JSON content type, set no-store, and never expose the
 provider resolver. Direct vault access is not an authorized HTTP entry point.
 Additional tests cover Unicode input, valid CSRF with wrong Origin, concurrent
-callback replay, allowlist revocation and guard-before-write. Total: 58 tests.
+callback replay, allowlist revocation and guard-before-write. Total: 61 tests.
 
 
 ## HTTP integration seam (experimental, not mounted)
@@ -231,3 +231,26 @@ explicitly chooses to run code. No migration or project execution is implemented
 
 The settings client rejects Fetch redirects and clears stale connected/CSRF state
 after failures. These policies are asserted by fake tests, not real proxy tests.
+
+
+## Dedicated Postgres/Supabase storage candidate
+`postgres-store.mjs` implements the same repository contract against an injected
+server-only Postgres client, using fixed private schema/table names and parameter
+binding. It opens no connection and reads no credentials. Atomic take is a single
+DELETE RETURNING statement. The SQL file is a draft migration only; nothing has
+been applied to a database and it intentionally contains no role/grant changes.
+
+Three query-contract tests verify bound parameters, fixed namespaces, one-statement
+consume, missing rows and error propagation. They use a fake query client, not a
+Postgres engine: SQL execution, actual concurrency, privileges, TLS, backup/restore
+and connection-pool behavior remain unverified. No production-readiness claim.
+
+A dedicated Bolt Supabase instance could host this private schema, while Authentik
+continues to establish verified issuer/subject identities in the Node service.
+Do not reuse the existing LV Computer Help production Supabase. Never give browser
+clients or generated projects administrative/service-role credentials or access to
+the account-control database. Supabase Auth identities/RLS must not be assumed to
+match Authentik without an explicit verified mapping. Keep private tables out of
+PostgREST exposure and review a least-privilege server role before deployment.
+Workspace metadata/blobs and generated-app databases require separate designs;
+this adapter currently covers only session, login transaction and credential rows.

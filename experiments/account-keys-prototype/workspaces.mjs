@@ -1,4 +1,4 @@
-/** Experimental server-internal immutable workspace snapshot service; mock storage only. */
+/** Experimental server-internal immutable workspace snapshot service; explicit trusted storage adapter. */
 import {randomUUID} from 'node:crypto';import {prepareInertImport} from './inert-import.mjs';
 export function createWorkspaceService({auth,repository}){
  const owner=async request=>{const p=await auth.verifyIdentity(request);if(typeof p?.issuer!=='string'||!p.issuer||typeof p?.subject!=='string'||!p.subject)throw Error('Unauthenticated');return JSON.stringify([p.issuer,p.subject]);};

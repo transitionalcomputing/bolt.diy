@@ -338,3 +338,22 @@ live account persistence is claimed by synthetic Request tests.
 Authorization and cancellation checks occur before write, not atomically with the
 storage commit. Revocation or abort racing an in-flight commit may still leave an
 inert snapshot saved; production must define this behavior and audit/retry semantics.
+
+
+## Persistent workspace SQL candidate
+
+`workspace-postgres.mjs` and `workspace-schema.sql` add a private dedicated-database
+candidate for complete immutable snapshots. Every lookup binds both server-derived
+owner and UUID; insertion never overwrites, and a composite primary key provides
+create-if-absent semantics at the database. The schema requires inert object records
+with matching IDs. It does not validate every embedded file/hash or encrypt projects.
+No database is connected or schema applied by importing the adapter.
+
+The separate PGlite lab executes this SQL using a temporary file-backed PostgreSQL
+WASM engine: two fake owners write distinct binary snapshots, close/reopen the engine,
+restore their own bytes, and cannot read the other's ID. Duplicate IDs within one
+owner fail without overwriting; hostile owner text stays bound. Missing required
+metadata fails the constraint. This is genuine local file persistence, but identity
+is mocked and the single-user engine does not establish real server roles, network
+security, multi-connection concurrency, process crash recovery or Supabase behavior.
+A dedicated test deployment and signed OIDC session integration remain separate gates.

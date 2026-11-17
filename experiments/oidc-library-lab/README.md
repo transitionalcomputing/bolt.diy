@@ -130,7 +130,7 @@ See https://pglite.dev/docs/about and https://github.com/electric-sql/pglite.
 size validation, then the pure inert-manifest validator. Five synthetic ZIP tests
 cover binary preservation, compressed package text, traversal/symlink/encryption,
 CRC corruption, false and excessive declared sizes, a highly compressed oversized
-payload, collisions and file-count limits. This increases this lab to 22 tests.
+payload, collisions and file-count limits. This increases this lab to 23 tests.
 No archive was downloaded, extracted to disk, imported into Bolt or executed.
 
 The parser snapshots at most 32 MiB compressed input, allows at most 2,000 total
@@ -155,3 +155,11 @@ One additional synthetic test composes parsed ZIP bytes with the owner-scoped
 workspace service and its Map repository: Alice restores binary data while Bob is
 denied. It makes no network calls, uses fake identity/CSRF and neither executes
 package scripts nor proves production session or persistent-database isolation.
+
+
+The workspace persistence test executes the new private snapshot schema with PGlite,
+then closes/reopens its temporary file-backed engine and reconstructs the service.
+It verifies two fake owners recover their binary bytes, cross-owner reads fail,
+duplicate creation cannot overwrite and missing metadata is rejected. This is not
+an Authentik login or separate OS process/crash test, and database privileges remain
+unverified. No existing Supabase or live Bolt database is used.

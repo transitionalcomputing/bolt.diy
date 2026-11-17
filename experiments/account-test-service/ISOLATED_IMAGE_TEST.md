@@ -48,3 +48,13 @@ Host can verify health, anonymous session/list/upload denial and invalid callbac
 rejection. Do not follow the fake authorization redirect or contact any external IdP.
 This verifies valid bootstrap and actual pg driver connectivity, not real login/TLS.
 No container should be attached to an existing production network or published port.
+
+The candidate includes `isolated-probe.mjs` for step above. Configure ONLY the
+network-none fake test with `TEST_ORIGIN=https://bolt-test.invalid`. Run the probe
+inside that test Node container: `node experiments/account-test-service/isolated-probe.mjs`.
+It contacts only `127.0.0.1:3000`, uses the fake canonical Host, never follows
+redirects, cancels unread bodies, and prints check labels/status codes only. It
+checks health, anonymous denial, invalid callback, and disabled AI-key routes.
+It does not start login, create sessions/projects, contact the IdP, or test actual
+user authentication. Do not use it against a real configured application. Unit
+tests use a mocked transport; native container results must be separately captured.

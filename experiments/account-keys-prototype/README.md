@@ -2,7 +2,7 @@
 
 Experimental, nonproduction prototype preserved only on the account-workspaces branch. No application integration, real credentials, authentication configuration, or deployment changes.
 
-Run `node --test *.test.mjs` from this directory (Node24 tested; 50 tests).
+Run `node --test *.test.mjs` from this directory (Node24 tested; 53 tests).
 
 Core contract:
 - Application supplies a reviewed `verifyIdentity(request)` capability. There is deliberately no default header/cookie verifier. Tests use a WeakMap of fake request objects, not user-controlled headers.
@@ -28,7 +28,7 @@ injected and mock-only in tests: no production JWT verifier or token exchange is
 implemented. The fake adapter accepts test subjects as codes and MUST NEVER be
 selected by an application. `createMockStore` is not durable or distributed.
 
-From the repository root run `node --test experiments/account-keys-prototype/*.test.mjs`: 50 tests pass under Node24.
+From the repository root run `node --test experiments/account-keys-prototype/*.test.mjs`: 53 tests pass under Node24.
 This is not a real browser, Authentik, workerd, discovery, or JWKS verification test.
 Node crypto compatibility with the deployed workerd runtime remains unverified.
 
@@ -69,7 +69,7 @@ server-internal nonproduction facade; HTTP routing must map methods strictly,
 limit body size, enforce JSON content type, set no-store, and never expose the
 provider resolver. Direct vault access is not an authorized HTTP entry point.
 Additional tests cover Unicode input, valid CSRF with wrong Origin, concurrent
-callback replay, allowlist revocation and guard-before-write. Total: 50 tests.
+callback replay, allowlist revocation and guard-before-write. Total: 53 tests.
 
 
 ## HTTP integration seam (experimental, not mounted)
@@ -188,8 +188,18 @@ unverified forwarded and Authentik identity headers, preserves original Origin
 for CSRF validation, and preserves separate Set-Cookie headers. The factory does
 not listen automatically. Tests bind only an ephemeral127.0.0.1 port and close it.
 
-Node receive/header timeouts do NOT impose a handler or upstream execution
-deadline. Client disconnect currently does not propagate cancellation to the
-handler/provider. TLS termination, reverse-proxy configuration/trust, rate limits,
+Node receive/header timeouts are separate from the explicit handler deadline.
+The bridge now aborts the Fetch request on handler deadline or client disconnect;
+the provider boundary forwards that signal and the driver combines it with its
+upstream deadline. Abort-aware local mocks verify propagation. Cancellation is
+cooperative: ignored AbortSignals cannot forcibly stop arbitrary handler work.
+The handler deadline ends when a Response is returned, not after its stream ends. TLS termination, reverse-proxy configuration/trust, rate limits,
 real OIDC login and actual Bolt route mounting remain untested. This bridge is
 not production-ready and no live listener, port or network setting was changed.
+
+
+Cancellation regression tests confirm safe deadline errors and request abort on
+client disconnect at a local loopback socket, plus caller cancellation reaching
+the fake provider transport. No live upstream cancellation was tested. Responses
+already returned as streams do not have a total stream lifetime deadline; that
+and full production streaming behavior remain unresolved.

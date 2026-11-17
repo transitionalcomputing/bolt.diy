@@ -6,7 +6,7 @@ export function createOpenAIDriver({transport,maxResponseBytes=1048576,timeoutMs
  async function send(config,path,body){
   if(config.baseURL!=='https://api.openai.com/v1'||typeof config.apiKey!=='string'||!config.apiKey||/[\r\n]/.test(config.apiKey))throw Error('Provider configuration invalid');
   try{
-   const response=await transport('https://api.openai.com/v1'+path,{method:body?'POST':'GET',headers:{authorization:'Bearer '+config.apiKey,...(body?{'content-type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{}),redirect:'error',signal:AbortSignal.timeout(timeoutMs)});
+   const response=await transport('https://api.openai.com/v1'+path,{method:body?'POST':'GET',headers:{authorization:'Bearer '+config.apiKey,...(body?{'content-type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{}),redirect:'error',signal:config.signal?AbortSignal.any([config.signal,AbortSignal.timeout(timeoutMs)]):AbortSignal.timeout(timeoutMs)});
    if(response.redirected||response.status<200||response.status>=300||response.headers.get('content-type')?.split(';')[0].trim().toLowerCase()!=='application/json'){await response.body?.cancel();throw Error('Rejected response')}
    const reader=response.body?.getReader();if(!reader)throw Error('Empty response');let length=0,chunks=[];
    try{while(true){const {done,value}=await reader.read();if(done)break;length+=value.byteLength;if(length>maxResponseBytes){await reader.cancel();throw Error('Oversized response')}chunks.push(value)}}finally{reader.releaseLock()}

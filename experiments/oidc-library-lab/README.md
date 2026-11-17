@@ -49,7 +49,7 @@ References:
 - https://github.com/panva/openid-client/blob/main/docs/functions/enableNonRepudiationChecks.md
 - https://docs.goauthentik.io/add-secure-apps/providers/oauth2/
 
-To test the orchestration suite too, run `node --test ../account-keys-prototype/*.test.mjs` from this directory (50 tests). Neither suite makes real provider requests.
+To test the orchestration suite too, run `node --test ../account-keys-prototype/*.test.mjs` from this directory (53 tests). Neither suite makes real provider requests.
 
 `node sqlite-runtime-probe.mjs` is a negative compatibility check for the separate
 Node SQLite experiment. On this local workerd binary, DatabaseSync throws
@@ -95,6 +95,7 @@ is the preferred production-design candidate, NOT a promotion of vite preview's
 local database simulation. Its transport/authentication boundary, operational
 backup/restore and secret lifecycle still require design/review before deployment.
 
-PKCE limitation: the fake identity provider does not compare the authorization
-code challenge with the submitted verifier. These tests exercise the client's
-PKCE parameter plumbing, not complete end-to-end PKCE enforcement by an IdP.
+PKCE coverage: the composed fake identity provider now compares the S256 hash
+of the submitted verifier with the challenge recorded at authorization. A wrong
+verifier is rejected and normal mock login succeeds. This is synthetic protocol
+coverage, not verification of the real Authentik provider configuration.

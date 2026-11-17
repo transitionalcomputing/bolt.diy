@@ -109,7 +109,7 @@ The server maps those names to explicitly fake fixtures and uses the existing
 owner-bound encrypted vault. Status returns only configured/fixture selection so
 two test accounts can prove their different saved choices survive reconstruction.
 Current tests use in-memory persistence; native PostgreSQL/browser acceptance is
-still pending. The separate bootstrap can optionally mount this seam; browser UI is not yet wired. A future
+still pending. The separate bootstrap can optionally mount this seam; the candidate browser UI exposes only fake fixture selection when the mode is enabled. A future
 separate test deployment must provision a fresh encryption key privately and keep
 it stable across restarts; never reuse a production vault key. A real OpenAI-key
 feature requires separate reviewed integration and cannot be enabled by changing
@@ -129,6 +129,11 @@ The separate server can enable the fixture endpoint only with
 route404. Inject this test encryption key privately into only the separate service,
 retain it for restart testing, and never print it or place it in source. This does
 not enable the real OpenAI-key endpoint, which remains404, nor any API calls. The
-browser UI has not yet been wired to fixture selection. Native383 test results do
+candidate browser UI offers only alpha/beta selection, save and remove in this mode. Native383 test results do
 not cover this later candidate. The new configuration wiring is locally tested,
 not actual provisioning or database/browser acceptance.
+The loopback integration also saves two different synthetic selections through signed
+fake OIDC sessions and the real HTTP adapter into file-backed PGlite, reconstructs
+listener/engine, signs both users in again and verifies each saved choice. Removing
+one leaves the other unchanged. This remains same-process synthetic IdP/manual
+cookies, not browser TLS enforcement, actual Authentik, or native multiuser PostgreSQL.

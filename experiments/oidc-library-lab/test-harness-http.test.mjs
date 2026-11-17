@@ -12,6 +12,7 @@ import {PGlite} from '@electric-sql/pglite';
 import {generateKeyPair,exportJWK,SignJWT} from 'jose';
 import {createProtocol} from './adapter.mjs';
 import {readInertZip} from './zip-intake.mjs';
+import {createFakeCredentialService} from '../account-test-service/fake-credentials.mjs';
 import {createTestHandler} from '../account-test-service/handler.mjs';
 import {createTestAuth} from '../account-test-service/auth.mjs';
 import {generateTestFixtures} from '../account-test-service/generate-test-fixtures.mjs';
@@ -56,7 +57,8 @@ test('loopback harness: signed fake logins, distinct imports, scoped reads, reop
    for(const schema of schemas)await db.exec(schema);
    const stores=createPostgresStores(db),auth=createTestAuth({config,protocol,stores});
    const workspaces=createWorkspaceService({auth,repository:createPostgresWorkspaceRepository(db)});
-   const handler=createTestHandler({origin,auth,workspaces,parseArchive:readInertZip,html:'<h1>Fake-only HTTP harness</h1>',script:'// No browser execution in this test'});
+   const fakeCredentials=createFakeCredentialService({auth,repository:stores.credentials,masterKey:Buffer.alloc(32,11)});
+   const handler=createTestHandler({origin,auth,workspaces,fakeCredentials,parseArchive:readInertZip,html:'<h1>Fake-only HTTP harness</h1>',script:'// No browser execution in this test'});
    server=createNodeAccountServer({publicOrigin:origin,handler});
    await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});
    const address=server.address();assert.equal(address.address,'127.0.0.1');port=address.port;
@@ -68,12 +70,12 @@ test('loopback harness: signed fake logins, distinct imports, scoped reads, reop
   function client(){return {cookies:new Map()};}
   // Only the connection uses loopback HTTP. Public Host is canonical; this manual
   // cookie jar deliberately does NOT model Secure/SameSite/browser/TLS enforcement.
-  async function send(browser,path,{method='GET',body,csrf}={}){
+  async function send(browser,path,{method='GET',body,csrf,contentType='application/zip'}={}){
    assert.ok(path.startsWith('/')&&!path.startsWith('//'));
    const headers={host:new URL(origin).host,origin,connection:'close'};
    if(browser.cookies.size)headers.cookie=[...browser.cookies].map(([k,v])=>k+'='+v).join('; ');
    if(csrf)headers['x-csrf-token']=csrf;
-   if(body!==undefined){headers['content-type']='application/zip';headers['content-length']=body.length;}
+   if(body!==undefined){headers['content-type']=contentType;headers['content-length']=body.length;}
    const response=await new Promise((resolve,reject)=>{
     const request=httpRequest({hostname:'127.0.0.1',port,path,method,headers,agent:false},incoming=>{
      const chunks=[];incoming.on('data',chunk=>chunks.push(chunk));incoming.on('error',reject);
@@ -111,6 +113,14 @@ test('loopback harness: signed fake logins, distinct imports, scoped reads, reop
   assert.equal((await send(anonymous,'/api/workspaces')).status,401);
   assert.equal((await send(anonymous,'/api/workspaces/import',{method:'POST',body:Buffer.from('not a ZIP')})).status,401);
   await login(alice,'alice');await login(bob,'bob');
+  for(const [browser,fixture] of [[alice,'alpha'],[bob,'beta']]){
+   const selected=await send(browser,'/api/test-credentials',{method:'PUT',contentType:'application/json',body:Buffer.from(JSON.stringify({fixture})),csrf:await csrf(browser)});assert.equal(selected.status,200);
+   assert.deepEqual((await send(browser,'/api/test-credentials')).json(),{configured:true,fixture});
+  }
+  const ciphertextRows=await db.query("SELECT payload FROM bolt_private.records WHERE namespace='credentials'");
+  assert.equal(ciphertextRows.rows.length,2);assert.equal(JSON.stringify(ciphertextRows.rows).includes('FAKE-ONLY'),false);
+  assert.equal((await send(anonymous,'/api/test-credentials')).status,401);
+
   const aliceId=await importFixture(alice,fixtures[0]),bobId=await importFixture(bob,fixtures[1]);
   assert.notEqual(aliceId,bobId);
   await verifyOwn(alice,aliceId,fixtures[0]);await verifyOwn(bob,bobId,fixtures[1]);
@@ -122,6 +132,12 @@ test('loopback harness: signed fake logins, distinct imports, scoped reads, reop
   // Real listener and disk engine reconstructed, but still within one Node process.
   const returningAlice=client(),returningBob=client();
   await login(returningAlice,'alice');await login(returningBob,'bob');
+  assert.deepEqual((await send(returningAlice,'/api/test-credentials')).json(),{configured:true,fixture:'alpha'});
+  assert.deepEqual((await send(returningBob,'/api/test-credentials')).json(),{configured:true,fixture:'beta'});
+  assert.equal((await send(returningAlice,'/api/test-credentials',{method:'DELETE',csrf:await csrf(returningAlice)})).status,200);
+  assert.deepEqual((await send(returningAlice,'/api/test-credentials')).json(),{configured:false});
+  assert.deepEqual((await send(returningBob,'/api/test-credentials')).json(),{configured:true,fixture:'beta'});
+
   await verifyOwn(returningAlice,aliceId,fixtures[0]);await verifyOwn(returningBob,bobId,fixtures[1]);
   assert.equal((await send(returningAlice,'/api/workspaces/'+bobId)).status,404);
   assert.equal((await send(returningBob,'/api/workspaces/'+aliceId)).status,404);
